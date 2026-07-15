@@ -101,25 +101,11 @@
         .notas-subtitulo { font-size: 13px; font-weight: 700; margin-bottom: 12px; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
         .notas-subtitulo::after { content: ''; flex: 1; height: 1px; background: var(--border-color); }
 
-        .notas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .notas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 10px; margin-bottom: 20px; }
         
-        .celda-nota { display: flex; flex-direction: column; gap: 5px; }
-
-        .celda-label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-align: center; text-transform: uppercase; letter-spacing: 0.4px; }
-
-        .celda-nota > input { width: 100%; padding: 12px 8px; text-align: center; border: 1.5px solid var(--border-color); border-radius: 12px; font-size: 16px; font-weight: 700; background: var(--input-bg); transition: all 0.2s; box-sizing: border-box; }
+        .celda-nota { display: flex; flex-direction: column; gap: 4px; }
+        .celda-nota > input { width: 100%; padding: 12px 8px; text-align: center; border: 1.5px solid var(--border-color); border-radius: 12px; font-size: 15px; font-weight: 600; background: var(--input-bg); transition: all 0.2s; box-sizing: border-box; }
         .celda-nota > input:focus { outline: none; background: white; border-color: #667eea; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15); }
-
-        .celda-nota.estado-aprobado > input { border-color: #6ee7b7; background: #ecfdf5; color: #065f46; }
-        .celda-nota.estado-reprobado > input { border-color: #fca5a5; background: #fef2f2; color: #b91c1c; }
-
-        .barra-nota { height: 4px; border-radius: 2px; background: #e5e7eb; overflow: hidden; }
-        .barra-nota-fill { height: 100%; width: 0%; border-radius: 2px; background: #d1d5db; transition: width 0.25s ease, background 0.25s ease; }
-
-        .stepper-btns { display: flex; gap: 4px; }
-        .step-btn { flex: 1; background: #f3f4f6; border: none; border-radius: 8px; font-size: 14px; line-height: 1; font-weight: 700; padding: 5px 0; cursor: pointer; color: #6b7280; transition: 0.15s ease; }
-        .step-btn:hover { background: #e5e7eb; color: #1f2937; transform: translateY(-1px); }
-        .step-btn:active { transform: scale(0.92); }
         
         .peso-ind-wrapper { display: flex; align-items: center; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 0 4px; }
         .peso-ind-wrapper input { width: 100%; border: none; background: transparent; padding: 4px; font-size: 11px; text-align: center; font-weight: bold; color: #b91c1c; outline: none; box-sizing: border-box;}
@@ -225,12 +211,6 @@
 
         let ramos = [];
         let currentUser = null;
-
-        // Determina si una nota está aprobada (>=4), reprobada (<4) o sin definir, para el feedback visual en vivo.
-        function estadoNota(nota) {
-            if (nota === '' || nota === undefined || nota === null || isNaN(nota)) return '';
-            return parseFloat(nota) >= 4 ? 'estado-aprobado' : 'estado-reprobado';
-        }
 
         function aplicarParcheMigracion(datos) {
             return datos.map(r => ({
@@ -415,38 +395,6 @@
             if (tipo === 'lab') ramo.notasLab[index] = valor !== '' ? parseFloat(valor) : '';
             window.guardarEnStorage();
             window.renderRamos();
-        };
-
-        // Botones +/- de cada celda: suman o restan 0.1 a la nota actual (parten de 1.0 si está vacía) y reutilizan actualizarNota.
-        window.ajustarNota = (ramoId, tipo, index, delta) => {
-            const ramo = ramos.find(r => r.id === ramoId);
-            if (!ramo) return;
-            const arr = tipo === 'cat' ? ramo.notasCat : (tipo === 'ej' ? ramo.notasEj : ramo.notasLab);
-            let actual = arr[index];
-            actual = (actual === '' || actual === undefined || isNaN(actual)) ? 1 : parseFloat(actual);
-            let nuevo = Math.round((actual + delta) * 10) / 10;
-            nuevo = Math.min(7, Math.max(1, nuevo));
-            window.actualizarNota(ramoId, tipo, index, nuevo);
-        };
-
-        // Feedback instantáneo mientras se escribe (oninput), sin esperar a que el campo pierda el foco.
-        window.previsualizarNota = (inputId, valor) => {
-            const celda = document.getElementById(`celda-${inputId}`);
-            if (!celda) return;
-            const barraFill = celda.querySelector('.barra-nota-fill');
-            celda.classList.remove('estado-aprobado', 'estado-reprobado');
-
-            if (valor === '' || isNaN(valor)) {
-                if (barraFill) { barraFill.style.width = '0%'; barraFill.style.background = '#d1d5db'; }
-                return;
-            }
-            const num = Math.min(7, Math.max(1, parseFloat(valor)));
-            const estado = num >= 4 ? 'estado-aprobado' : 'estado-reprobado';
-            celda.classList.add(estado);
-            if (barraFill) {
-                barraFill.style.width = `${((num - 1) / 6) * 100}%`;
-                barraFill.style.background = num >= 4 ? '#10b981' : '#ef4444';
-            }
         };
 
         window.actualizarPesoInd = (ramoId, tipo, index, valor) => {
@@ -653,22 +601,9 @@
                     let html = '';
                     arrNotas.forEach((nota, index) => {
                         const pesoValue = arrPesos ? arrPesos[index] : '';
-                        const inputId = `${tipo}-${ramo.id}-${index}`;
-                        const estado = estadoNota(nota);
-                        const anchoBarra = (nota !== '' && !isNaN(nota)) ? (((parseFloat(nota) - 1) / 6) * 100) : 0;
-                        const colorBarra = estado === 'estado-aprobado' ? '#10b981' : (estado === 'estado-reprobado' ? '#ef4444' : '#d1d5db');
-
-                        html += `<div class="celda-nota ${estado}" id="celda-${inputId}">
-                            <span class="celda-label">${placeholderPrefix}${index+1}</span>
-                            <input type="number" id="${inputId}" step="0.1" min="1" max="7" value="${nota}" placeholder="-"
-                                oninput="previsualizarNota('${inputId}', this.value)"
-                                onchange="actualizarNota('${ramo.id}', '${tipo}', ${index}, this.value)"
-                                title="Nota de 1.0 a 7.0">
-                            <div class="barra-nota"><div class="barra-nota-fill" style="width:${anchoBarra}%; background:${colorBarra};"></div></div>
-                            <div class="stepper-btns">
-                                <button type="button" class="step-btn" title="Restar 0.1" onclick="ajustarNota('${ramo.id}', '${tipo}', ${index}, -0.1)">−</button>
-                                <button type="button" class="step-btn" title="Sumar 0.1" onclick="ajustarNota('${ramo.id}', '${tipo}', ${index}, 0.1)">+</button>
-                            </div>`;
+                        
+                        html += `<div class="celda-nota">
+                            <input type="number" id="${tipo}-${ramo.id}-${index}" step="0.1" min="1" max="7" value="${nota}" placeholder="${placeholderPrefix}${index+1}" onchange="actualizarNota('${ramo.id}', '${tipo}', ${index}, this.value)">`;
                             
                         if (ramo.modoAvanzado) {
                             html += `<div class="peso-ind-wrapper" title="Ingresa el % que vale esta nota individual">
