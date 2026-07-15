@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Académico Pro</title>
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
+            --danger-gradient: linear-gradient(135deg, #ff0844 0%, #ffb199 100%);
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --border-color: #e5e7eb;
+            --input-bg: #f9fafb;
+            --shadow-soft: 0 10px 25px rgba(0, 0, 0, 0.05);
+            --shadow-hover: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-color);
+            background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
+            background-size: 20px 20px;
+            color: var(--text-main);
+            margin: 0;
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+
+        .container { max-width: 1100px; margin: 0 auto; }
+
+        header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 40px; background: var(--card-bg); padding: 25px 40px;
+            border-radius: 24px; box-shadow: var(--shadow-soft); border: 1px solid rgba(255,255,255,0.8);
+            flex-wrap: wrap; gap: 15px;
+        }
+
+        header h1 { margin: 0; font-size: 28px; font-weight: 800; background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        header p { margin: 8px 0 0 0; color: var(--text-muted); font-size: 15px; }
+
+        .header-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap;}
+
+        .btn { padding: 12px 24px; border: none; border-radius: 14px; font-size: 15px; font-weight: 700; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .btn:active { transform: scale(0.96); }
+        
+        .btn-primary { background: var(--primary-gradient); color: white; }
+        .btn-primary:hover { box-shadow: 0 8px 25px rgba(118, 75, 162, 0.4); transform: translateY(-2px); }
+
+        .btn-ghost { background: transparent; border: 2px solid #e5e7eb; color: var(--text-main); box-shadow: none; padding: 10px 20px; }
+        .btn-ghost:hover { border-color: #667eea; color: #667eea; }
+
+        .btn-calc { background: var(--text-main); color: white; width: 100%; margin-top: 10px; }
+        .btn-calc:hover { background: #000; box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2); }
+
+        .grid-ramos { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 30px; }
+
+        .ramo-card {
+            background: var(--card-bg); border-radius: 24px; box-shadow: var(--shadow-soft);
+            padding: 30px; border: 1px solid rgba(255,255,255,0.5); transition: all 0.3s ease;
+            display: flex; flex-direction: column; justify-content: space-between;
+        }
+        .ramo-card:hover { box-shadow: var(--shadow-hover); transform: translateY(-5px); }
+
+        .ramo-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; }
+
+        .ramo-nombre-input {
+            font-size: 22px; font-weight: 700; color: var(--text-main); background: transparent;
+            border: 2px dashed transparent; border-radius: 8px; padding: 4px 8px; margin-left: -8px;
+            width: 100%; max-width: 85%; font-family: inherit; transition: all 0.2s; cursor: pointer;
+        }
+        .ramo-nombre-input:hover { border-color: #cbd5e1; background: rgba(255,255,255,0.5); }
+        .ramo-nombre-input:focus { outline: none; border-color: #667eea; background: white; cursor: text; }
+
+        .btn-delete {
+            background: #fef2f2; border: none; color: #ef4444; width: 32px; height: 32px;
+            border-radius: 10px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+        }
+        .btn-delete:hover { background: #fee2e2; transform: rotate(90deg); }
+
+        .config-box { background: var(--input-bg); padding: 15px; border-radius: 16px; margin-bottom: 20px; position: relative; }
+        .config-row { display: flex; gap: 15px; margin-bottom: 12px; }
+        .config-row:last-child { margin-bottom: 0; }
+
+        .input-group { flex: 1; }
+        .input-group label { display: block; margin-bottom: 6px; font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+        .input-group input { width: 100%; padding: 10px 12px; border: 1.5px solid var(--border-color); border-radius: 10px; box-sizing: border-box; font-size: 14px; background: white; transition: border-color 0.3s, box-shadow 0.3s; }
+        .input-group input:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
+        
+        .input-especial input { border-color: #89f7fe; background: #f0fdfa; font-weight: bold; color: #0d9488; }
+        .input-rescate input { border-color: #fca5a5; background: #fef2f2; font-weight: bold; color: #b91c1c; }
+
+        .toggle-avanzado { display: flex; align-items: center; justify-content: space-between; background: white; padding: 10px 15px; border-radius: 12px; border: 1px solid var(--border-color); cursor: pointer; transition: 0.2s; }
+        .toggle-avanzado:hover { border-color: #667eea; }
+        .toggle-avanzado span { font-size: 11px; font-weight: 600; color: var(--text-main); }
+        .toggle-avanzado input[type="checkbox"] { width: 16px; height: 16px; accent-color: #667eea; cursor: pointer; margin-left: 8px;}
+
+        .notas-subtitulo { font-size: 13px; font-weight: 700; margin-bottom: 12px; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
+        .notas-subtitulo::after { content: ''; flex: 1; height: 1px; background: var(--border-color); }
+
+        .notas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        
+        .celda-nota { display: flex; flex-direction: column; gap: 4px; }
+        .celda-nota > input { width: 100%; padding: 12px 8px; text-align: center; border: 1.5px solid var(--border-color); border-radius: 12px; font-size: 15px; font-weight: 600; background: var(--input-bg); transition: all 0.2s; box-sizing: border-box; }
+        .celda-nota > input:focus { outline: none; background: white; border-color: #667eea; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15); }
+        
+        .peso-ind-wrapper { display: flex; align-items: center; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 0 4px; }
+        .peso-ind-wrapper input { width: 100%; border: none; background: transparent; padding: 4px; font-size: 11px; text-align: center; font-weight: bold; color: #b91c1c; outline: none; box-sizing: border-box;}
+        .peso-ind-wrapper span { font-size: 10px; color: #dc2626; font-weight: bold; padding-right: 4px;}
+
+        .nota-predicha { background-color: #eef2ff !important; color: #4338ca !important; border-color: #818cf8 !important; font-style: italic; }
+
+        .resultado-box { margin-top: 20px; padding: 20px; border-radius: 16px; text-align: center; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); display: none; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .res-aprobado { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+        .res-reprobado { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+        .res-critico { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+        .res-proyeccion { background: #eef2ff; color: #3730a3; border: 1px solid #c7d2fe; }
+
+        .res-header { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; opacity: 0.8; }
+        .resultado-box span { display: block; font-size: 36px; font-weight: 800; margin: 5px 0; letter-spacing: -1px; }
+        .salvavidas { font-size: 13px; margin-top: 12px; font-weight: 500; background: rgba(255,255,255,0.5); padding: 10px; border-radius: 10px; text-align: left; }
+        
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 1000; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box;}
+        .modal-content { background: white; padding: 35px; border-radius: 24px; max-width: 500px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); animation: slideUp 0.3s; }
+        .modal-content h2 { margin-top: 0; color: #1f2937; display: flex; align-items: center; gap: 10px;}
+        .modal-item { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #f3f4f6;}
+        .modal-item:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0;}
+        .modal-item h4 { margin: 0 0 5px 0; color: #4f46e5; font-size: 15px;}
+        .modal-item p { margin: 0; color: #4b5563; font-size: 14px; line-height: 1.5;}
+
+        .vacio-msg { grid-column: 1 / -1; text-align: center; padding: 60px 20px; background: transparent; }
+        .vacio-msg h3 { font-size: 20px; color: var(--text-main); margin-bottom: 10px; }
+        .vacio-msg p { color: var(--text-muted); }
+
+        .auth-container { background: #fff; border: 1px solid var(--border-color); border-radius: 12px; padding: 8px 16px; box-shadow: var(--shadow-soft); display:flex; align-items:center; min-height: 54px; box-sizing: border-box;}
+        .auth-btn { display: flex; align-items: center; gap: 8px; background: white; color: #444; border: 1px solid #ddd; padding: 8px 14px; border-radius: 10px; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 13px;}
+        .auth-btn:hover { background: #f8f9fa; border-color: #ccc; }
+    </style>
+</head>
+<body>
+
+    <div id="guiaModal" class="modal-overlay" onclick="cerrarGuia(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h2>Manual de Supervivencia 📖</h2>
+            <div class="modal-item">
+                <h4>🎯 Nota Eximición</h4>
+                <p>La nota mágica. Si tu promedio llega a este número, la calculadora te avisa que ya eres libre y no necesitas dar examen.</p>
+            </div>
+            <div class="modal-item">
+                <h4>🛟 Peso Examen de Rescate</h4>
+                <p>Útil para ramos como Electromagnetismo. Si no logras eximirte, el programa comprime tus notas y asume que el examen final valdrá este porcentaje para salvarte.</p>
+            </div>
+            <div class="modal-item">
+                <h4>🔮 Modo Predictivo (What If)</h4>
+                <p>¿Te faltan notas por dar? Déjalas en blanco y dale a calcular. El sistema despejará la incógnita y te dirá exactamente qué promedio necesitas sacarte en el futuro para aprobar.</p>
+            </div>
+            <div class="modal-item">
+                <h4>⚙️ Modo Avanzado (Pesos Individuales)</h4>
+                <p>Activa esta casilla si las pruebas valen distinto entre sí. Se ocultará el peso global y podrás ponerle el % exacto a cada nota.</p>
+            </div>
+            <div class="modal-item">
+                <h4>🔄 Aproximar Final</h4>
+                <p>Actívalo si tu profesor redondea los promedios de presentación (Ejemplo: Sube un 3.95 automáticamente a un 4.0).</p>
+            </div>
+            <button class="btn btn-primary" style="width: 100%; margin-top: 15px;" onclick="document.getElementById('guiaModal').style.display='none'">¡Entendido!</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <div>
+                <h1>Mis Ramos 📚</h1>
+                <p>Gestiona y proyecta tus notas del semestre</p>
+            </div>
+            <div class="header-actions">
+                <div id="auth-section" class="auth-container">
+                    <span style="font-size:13px; color:#888;">Cargando nube...</span>
+                </div>
+                <button class="btn btn-ghost" onclick="document.getElementById('guiaModal').style.display='flex'">❔ Ayuda</button>
+                <button class="btn btn-primary" onclick="agregarRamo()">+ Nuevo Ramo</button>
+            </div>
+        </header>
+
+        <main class="grid-ramos" id="grid-ramos">
+        </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDsYe2wMkE5XNw6KAfvkzK87HDfroy2iy8",
+            authDomain: "calculadora-9d778.firebaseapp.com",
+            projectId: "calculadora-9d778",
+            storageBucket: "calculadora-9d778.firebasestorage.app",
+            messagingSenderId: "400758968025",
+            appId: "1:400758968025:web:df9e699d7be7404f65f8c8"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const provider = new GoogleAuthProvider();
+
+        let ramos = [];
+        let currentUser = null;
+
+        function aplicarParcheMigracion(datos) {
+            return datos.map(r => ({
+                ...r, 
+                modoAvanzado: r.modoAvanzado || false,
+                aproximar: r.aproximar || false,
+                pesosCatInd: r.pesosCatInd || Array(r.cantCat || 0).fill(''),
+                pesosEjInd: r.pesosEjInd || Array(r.cantEj || 0).fill(''),
+                pesosLabInd: r.pesosLabInd || Array(r.cantLab || 0).fill('')
+            }));
+        }
+
+        window.loginFirebase = () => {
+            signInWithPopup(auth, provider).catch(err => alert("Error al iniciar sesión: " + err.message));
+        };
+
+        window.logoutFirebase = () => {
+            if (confirm("¿Estás seguro de cerrar sesión? Por seguridad, se limpiarán tus ramos de la pantalla.")) {
+                ramos = [];
+                localStorage.removeItem('dashboard_ramos'); 
+                signOut(auth).then(() => {
+                    window.renderRamos(); 
+                }).catch(err => console.error(err));
+            }
+        };
+
+        onAuthStateChanged(auth, async (user) => {
+            currentUser = user;
+            const authDiv = document.getElementById('auth-section');
+
+            if (user) {
+                authDiv.innerHTML = `
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <img src="${user.photoURL}" style="width:36px; height:36px; border-radius:50%; border:2px solid #667eea;" referrerpolicy="no-referrer">
+                        <div style="display:flex; flex-direction:column; align-items:flex-start;">
+                            <span style="font-size:14px; font-weight:bold; line-height:1;">${user.displayName.split(' ')[0]}</span>
+                            <button onclick="logoutFirebase()" style="background:none; border:none; color:var(--danger-gradient); font-size:11px; padding:0; cursor:pointer; margin-top:4px;">Desconectar</button>
+                        </div>
+                    </div>
+                `;
+
+                try {
+                    const docRef = doc(db, "usuarios", user.uid);
+                    const docSnap = await getDoc(docRef);
+                    if (docSnap.exists() && docSnap.data().ramos) {
+                        ramos = aplicarParcheMigracion(docSnap.data().ramos);
+                    } else {
+                        cargarDesdeCache();
+                        window.guardarEnStorage(); 
+                    }
+                } catch (e) {
+                    console.error("Error leyendo Firestore:", e);
+                    cargarDesdeCache();
+                }
+            } else {
+                authDiv.innerHTML = `
+                    <button class="auth-btn" onclick="loginFirebase()">
+                        <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                        Sincronizar Nube
+                    </button>
+                `;
+                cargarDesdeCache();
+            }
+            window.renderRamos();
+        });
+
+        function cargarDesdeCache() {
+            const datosGuardados = localStorage.getItem('dashboard_ramos');
+            if (datosGuardados) {
+                ramos = aplicarParcheMigracion(JSON.parse(datosGuardados));
+            } else {
+                ramos = [];
+            }
+        }
+
+        window.guardarEnStorage = async () => {
+            localStorage.setItem('dashboard_ramos', JSON.stringify(ramos));
+            if (currentUser) {
+                try {
+                    await setDoc(doc(db, "usuarios", currentUser.uid), { ramos: ramos });
+                } catch (e) {
+                    console.error("Fallo al guardar en la nube:", e);
+                }
+            }
+        };
+
+        window.cerrarGuia = (e) => {
+            if (e.target.id === 'guiaModal') {
+                document.getElementById('guiaModal').style.display = 'none';
+            }
+        };
+
+        window.agregarRamo = () => {
+            const nombre = prompt("Ingresa el nombre de la asignatura (ej: Cálculo, Electro):");
+            if (!nombre) return;
+
+            ramos.push({
+                id: Date.now().toString(),
+                nombre: nombre,
+                modoAvanzado: false,
+                aproximar: false,
+                notaEximicion: 5.5,
+                pesoExamen: 0,
+                pesoCat: 45, cantCat: 3,
+                pesoEj: 20, cantEj: 4,
+                pesoLab: 0, cantLab: 0,
+                notasCat: Array(3).fill(''), pesosCatInd: Array(3).fill(''),
+                notasEj: Array(4).fill(''), pesosEjInd: Array(4).fill(''),
+                notasLab: [], pesosLabInd: []
+            });
+            window.guardarEnStorage();
+            window.renderRamos();
+        };
+
+        window.eliminarRamo = (id) => {
+            if (confirm("¿Estás seguro de eliminar este ramo?")) {
+                ramos = ramos.filter(r => r.id !== id);
+                window.guardarEnStorage();
+                window.renderRamos();
+            }
+        };
+
+        window.actualizarNombre = (id, nuevoNombre) => {
+            const ramo = ramos.find(r => r.id === id);
+            if (!ramo) return;
+            ramo.nombre = nuevoNombre || "Sin Nombre";
+            window.guardarEnStorage();
+        };
+
+        window.toggleModoAvanzado = (id) => {
+            const ramo = ramos.find(r => r.id === id);
+            if (!ramo) return;
+            ramo.modoAvanzado = !ramo.modoAvanzado;
+            window.guardarEnStorage();
+            window.renderRamos();
+        };
+
+        window.toggleAproximar = (id) => {
+            const ramo = ramos.find(r => r.id === id);
+            if (!ramo) return;
+            ramo.aproximar = !ramo.aproximar;
+            window.guardarEnStorage();
+            window.renderRamos();
+        };
+
+        window.actualizarConfig = (id, campo, valor) => {
+            const ramo = ramos.find(r => r.id === id);
+            if (!ramo) return;
+
+            ramo[campo] = parseFloat(valor) || 0;
+
+            const resizingHelper = (cantVal, arrNotas, arrPesos) => {
+                const actualesN = [...arrNotas];
+                const actualesP = [...arrPesos];
+                const nuevasN = Array(parseInt(cantVal) || 0).fill('').map((_, i) => actualesN[i] !== undefined ? actualesN[i] : '');
+                const nuevasP = Array(parseInt(cantVal) || 0).fill('').map((_, i) => actualesP[i] !== undefined ? actualesP[i] : '');
+                return { nuevasN, nuevasP };
+            };
+
+            if (campo === 'cantCat') {
+                const res = resizingHelper(valor, ramo.notasCat, ramo.pesosCatInd);
+                ramo.notasCat = res.nuevasN; ramo.pesosCatInd = res.nuevasP;
+            }
+            if (campo === 'cantEj') {
+                const res = resizingHelper(valor, ramo.notasEj, ramo.pesosEjInd);
+                ramo.notasEj = res.nuevasN; ramo.pesosEjInd = res.nuevasP;
+            }
+            if (campo === 'cantLab') {
+                const res = resizingHelper(valor, ramo.notasLab || [], ramo.pesosLabInd || []);
+                ramo.notasLab = res.nuevasN; ramo.pesosLabInd = res.nuevasP;
+            }
+
+            window.guardarEnStorage();
+            window.renderRamos();
+        };
+
+        window.actualizarNota = (ramoId, tipo, index, valor) => {
+            const ramo = ramos.find(r => r.id === ramoId);
+            if (!ramo) return;
+            if (tipo === 'cat') ramo.notasCat[index] = valor !== '' ? parseFloat(valor) : '';
+            if (tipo === 'ej') ramo.notasEj[index] = valor !== '' ? parseFloat(valor) : '';
+            if (tipo === 'lab') ramo.notasLab[index] = valor !== '' ? parseFloat(valor) : '';
+            window.guardarEnStorage();
+            window.renderRamos();
+        };
+
+        window.actualizarPesoInd = (ramoId, tipo, index, valor) => {
+            const ramo = ramos.find(r => r.id === ramoId);
+            if (!ramo) return;
+            if (tipo === 'cat') ramo.pesosCatInd[index] = valor !== '' ? parseFloat(valor) : '';
+            if (tipo === 'ej') ramo.pesosEjInd[index] = valor !== '' ? parseFloat(valor) : '';
+            if (tipo === 'lab') ramo.pesosLabInd[index] = valor !== '' ? parseFloat(valor) : '';
+            window.guardarEnStorage();
+        };
+
+        window.calcularRamo = (id) => {
+            const ramo = ramos.find(r => r.id === id);
+            if (!ramo) return;
+
+            const resBox = document.getElementById(`res-${id}`);
+            resBox.classList.remove('res-aprobado', 'res-reprobado', 'res-critico', 'res-proyeccion');
+
+            let sumaPorcentajesBase = 0; 
+            let notaAcumulada = 0;       
+            let pesoVacio = 0;           
+            let totalVacios = 0;         
+
+            if (!ramo.modoAvanzado) {
+                const pesoC = (ramo.pesoCat || 0) / 100;
+                const pesoE = (ramo.pesoEj || 0) / 100;
+                const pesoL = (ramo.pesoLab || 0) / 100;
+                sumaPorcentajesBase = pesoC + pesoE + pesoL;
+
+                const procesarCategoria = (cant, notas, pesoCatG) => {
+                    if (cant === 0) return;
+                    const pesoIndividual = pesoCatG / cant;
+                    notas.forEach(n => {
+                        if (n === '' || isNaN(n)) {
+                            pesoVacio += pesoIndividual;
+                            totalVacios++;
+                        } else {
+                            notaAcumulada += parseFloat(n) * pesoIndividual;
+                        }
+                    });
+                };
+                procesarCategoria(ramo.cantCat, ramo.notasCat, pesoC);
+                procesarCategoria(ramo.cantEj, ramo.notasEj, pesoE);
+                procesarCategoria(ramo.cantLab, ramo.notasLab, pesoL);
+            } else {
+                const procesarCategoriaAvanzada = (cant, notas, pesosInd) => {
+                    if (cant === 0) return;
+                    for (let i = 0; i < cant; i++) {
+                        const pesoInd = (parseFloat(pesosInd[i]) || 0) / 100;
+                        sumaPorcentajesBase += pesoInd; 
+                        const n = notas[i];
+                        if (n === '' || isNaN(n)) {
+                            pesoVacio += pesoInd;
+                            totalVacios++;
+                        } else {
+                            notaAcumulada += parseFloat(n) * pesoInd;
+                        }
+                    }
+                };
+                procesarCategoriaAvanzada(ramo.cantCat, ramo.notasCat, ramo.pesosCatInd || []);
+                procesarCategoriaAvanzada(ramo.cantEj, ramo.notasEj, ramo.pesosEjInd || []);
+                procesarCategoriaAvanzada(ramo.cantLab, ramo.notasLab, ramo.pesosLabInd || []);
+            }
+
+            const metaEximicion = ramo.notaEximicion || 5.5;
+            const pesoExamenRescate = ramo.pesoExamen || 0;
+
+            if (sumaPorcentajesBase === 0) {
+                alert("Debes configurar los porcentajes (pesos) del ramo antes de calcular.");
+                return;
+            }
+
+            if (totalVacios > 0) {
+                if (pesoVacio === 0) {
+                    alert("Tienes casillas vacías, pero no les asignaste peso (%). La proyección no se puede calcular.");
+                    return;
+                }
+
+                const metaAProyectar = (sumaPorcentajesBase >= 0.99 && pesoExamenRescate === 0) ? 4.0 : metaEximicion;
+                const notaRequerida = ((metaAProyectar * sumaPorcentajesBase) - notaAcumulada) / pesoVacio;
+
+                const rellenarVacios = (tipo, notasArreglo) => {
+                    notasArreglo.forEach((n, i) => {
+                        if (n === '' || isNaN(n)) {
+                            const input = document.getElementById(`${tipo}-${id}-${i}`);
+                            if (input) {
+                                input.value = notaRequerida.toFixed(1);
+                                input.classList.add('nota-predicha');
+                            }
+                        }
+                    });
+                };
+
+                if (ramo.cantCat > 0) rellenarVacios('cat', ramo.notasCat);
+                if (ramo.cantEj > 0) rellenarVacios('ej', ramo.notasEj);
+                if (ramo.cantLab > 0) rellenarVacios('lab', ramo.notasLab);
+
+                resBox.classList.add('res-proyeccion');
+                let HTML = `<div class="res-header">Modo Predictivo 🔮</div>`;
+                
+                const notaParaSalvar = ((4.0 * sumaPorcentajesBase) - notaAcumulada) / pesoVacio;
+
+                if (notaRequerida > 7.0) {
+                    HTML += `<span>¡A Examen! 💀</span><div class="salvavidas">Ya no te da para eximirte (necesitabas un ${notaRequerida.toFixed(1)}).</div>`;
+                    
+                    if (metaAProyectar !== 4.0) {
+                        if(notaParaSalvar <= 7.0 && notaParaSalvar >= 1.0) {
+                            HTML += `<div style="font-size:13px; margin-top:8px; background: rgba(255,255,255,0.7); padding: 10px; border-radius: 8px;">Pero tranquilo: para lograr un <strong>4.0 de presentación</strong> y poder dar el examen, necesitas promediar <strong>${notaParaSalvar.toFixed(1)}</strong> en las notas faltantes.</div>`;
+                        } else if (notaParaSalvar > 7.0) {
+                            HTML += `<div style="font-size:13px; margin-top:8px; color: #991b1b; font-weight: bold; background: rgba(255,255,255,0.7); padding: 10px; border-radius: 8px;">Peor aún: necesitas un <strong>${notaParaSalvar.toFixed(1)}</strong> solo para llegar a 4.0. Ramo virtualmente reprobado.</div>`;
+                        }
+                    }
+                } else if (notaRequerida <= 1.0) {
+                    HTML += `<span>¡Asegurado! 🎊</span><div class="salvavidas">Estás tan sobrado que incluso con un 1.0 en todo lo que falta, logras tu objetivo.</div>`;
+                } else {
+                    let etiquetaExito = (metaAProyectar === 4.0) ? "para aprobar el ramo." : "para eximirte.";
+                    HTML += `<span>${notaRequerida.toFixed(1)}</span><div class="salvavidas">Necesitas promediar esta nota en las <strong>${totalVacios} evaluaciones</strong> faltantes ${etiquetaExito}</div>`;
+                    
+                    if (metaAProyectar !== 4.0) {
+                        if(notaParaSalvar <= 7.0 && notaParaSalvar > 1.0) {
+                            HTML += `<div style="font-size:12px; margin-top:8px; opacity:0.8;">(Si quieres rendirte, para salvar el ramo y dar el examen necesitas solo un <strong>${notaParaSalvar.toFixed(1)}</strong>)</div>`;
+                        }
+                    }
+                }
+                resBox.innerHTML = HTML;
+                resBox.style.display = 'block';
+                return;
+            }
+
+            // ======= NUEVO SISTEMA DE REDONDEO =======
+            let notaBase = notaAcumulada / sumaPorcentajesBase;
+            if (ramo.aproximar) {
+                notaBase = Math.round(notaBase * 10) / 10;
+            }
+            // =========================================
+
+            let HTML = '';
+
+            if (notaBase >= metaEximicion) {
+                resBox.classList.add('res-aprobado');
+                HTML = `<div class="res-header">Nota Final</div><span>${notaBase.toFixed(2)}</span>¡Eximido del examen! 🎉`;
+            } 
+            else if (sumaPorcentajesBase >= 0.99 && pesoExamenRescate > 0) {
+                const pesoExamenDec = pesoExamenRescate / 100;
+                const pesoPresentacionDec = 1 - pesoExamenDec; 
+                
+                const notaNecesaria = (4.0 - (notaBase * pesoPresentacionDec)) / pesoExamenDec;
+                
+                HTML = `<div class="res-header">Nota de Presentación</div><span>${notaBase.toFixed(2)}</span>`;
+                if (notaNecesaria > 7.0) {
+                    resBox.classList.add('res-critico');
+                    HTML += `Reprobado matemático 💀`;
+                } else {
+                    resBox.classList.add('res-reprobado');
+                    HTML += `No alcanza para eximir.`;
+                    HTML += `<div class="salvavidas">Tus notas se comprimen al ${(pesoPresentacionDec*100).toFixed(0)}%. Necesitas un <strong>${notaNecesaria.toFixed(1)}</strong> en el examen final para aprobar.</div>`;
+                }
+            }
+            else if (sumaPorcentajesBase >= 0.99) {
+                HTML = `<div class="res-header">Nota Final (100%)</div><span>${notaBase.toFixed(2)}</span>`;
+                if (notaBase >= 4.0) {
+                    resBox.classList.add('res-aprobado');
+                    HTML += `¡Ramo aprobado! 🎉`;
+                } else {
+                    resBox.classList.add('res-critico');
+                    HTML += `Ramo reprobado definitivamente 💀`;
+                }
+            }
+            else {
+                const porcentajeFaltante = Math.round((1 - sumaPorcentajesBase) * 1000) / 1000;
+                const notaNecesaria = (4.0 - (notaBase * sumaPorcentajesBase)) / porcentajeFaltante;
+                
+                HTML = `<div class="res-header">Nota de Presentación (${(sumaPorcentajesBase*100).toFixed(0)}%)</div><span>${notaBase.toFixed(2)}</span>`;
+                
+                if (notaNecesaria > 7.0) {
+                    resBox.classList.add('res-critico');
+                    HTML += `Reprobado matemático 💀`;
+                } else {
+                    resBox.classList.add('res-reprobado');
+                    HTML += `Toca rendir examen.`;
+                    HTML += `<div class="salvavidas">Necesitas un <strong>${notaNecesaria.toFixed(1)}</strong> en el examen (${(porcentajeFaltante*100).toFixed(0)}%) para aprobar.</div>`;
+                }
+            }
+            
+            resBox.innerHTML = HTML;
+            resBox.style.display = 'block'; 
+        };
+
+        window.renderRamos = () => {
+            const grid = document.getElementById('grid-ramos');
+            grid.innerHTML = '';
+
+            if (ramos.length === 0) {
+                grid.innerHTML = `
+                    <div class="vacio-msg">
+                        <h3>No hay ramos activos</h3>
+                        <p>Presiona el botón "+ Nuevo Ramo" arriba a la derecha para empezar a calcular tus notas.</p>
+                    </div>`;
+                return;
+            }
+
+            ramos.forEach(ramo => {
+                const renderNotasInputs = (tipo, arrNotas, arrPesos, placeholderPrefix) => {
+                    let html = '';
+                    arrNotas.forEach((nota, index) => {
+                        const pesoValue = arrPesos ? arrPesos[index] : '';
+                        
+                        html += `<div class="celda-nota">
+                            <input type="number" id="${tipo}-${ramo.id}-${index}" step="0.1" min="1" max="7" value="${nota}" placeholder="${placeholderPrefix}${index+1}" onchange="actualizarNota('${ramo.id}', '${tipo}', ${index}, this.value)">`;
+                            
+                        if (ramo.modoAvanzado) {
+                            html += `<div class="peso-ind-wrapper" title="Ingresa el % que vale esta nota individual">
+                                <input type="number" step="1" min="0" max="100" value="${pesoValue}" placeholder="Ej: 20" onchange="actualizarPesoInd('${ramo.id}', '${tipo}', ${index}, this.value)">
+                                <span>%</span>
+                            </div>`;
+                        }
+                        html += `</div>`;
+                    });
+                    return html;
+                };
+
+                const inputsCatHTML = renderNotasInputs('cat', ramo.notasCat, ramo.pesosCatInd, 'C');
+                const inputsEjHTML = renderNotasInputs('ej', ramo.notasEj, ramo.pesosEjInd, 'E');
+                const inputsLabHTML = ramo.cantLab > 0 ? renderNotasInputs('lab', ramo.notasLab, ramo.pesosLabInd, 'L') : '';
+
+                const card = document.createElement('div');
+                card.className = 'ramo-card';
+                card.innerHTML = `
+                    <div>
+                        <div class="ramo-header">
+                            <input type="text" class="ramo-nombre-input" value="${ramo.nombre}" onchange="actualizarNombre('${ramo.id}', this.value)" title="Haz clic para editar el nombre">
+                            <button class="btn-delete" title="Eliminar ramo" onclick="eliminarRamo('${ramo.id}')">✕</button>
+                        </div>
+
+                        <div class="config-box">
+                            <div style="display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap;">
+                                <label class="toggle-avanzado" style="flex:1; min-width:140px;" title="Actívalo si cada prueba vale un % distinto.">
+                                    <span>⚙️ Pesos Indiv.</span>
+                                    <input type="checkbox" onchange="toggleModoAvanzado('${ramo.id}')" ${ramo.modoAvanzado ? 'checked' : ''}>
+                                </label>
+                                <label class="toggle-avanzado" style="flex:1; min-width:140px;" title="Redondea la nota final (Ej: 3.95 pasa a 4.0)">
+                                    <span>🔄 Aproximar</span>
+                                    <input type="checkbox" onchange="toggleAproximar('${ramo.id}')" ${ramo.aproximar ? 'checked' : ''}>
+                                </label>
+                            </div>
+
+                            <div class="config-row">
+                                <div class="input-group input-especial">
+                                    <label>Nota Eximición</label>
+                                    <input type="number" step="0.1" min="1" max="7" value="${ramo.notaEximicion || 5.5}" onchange="actualizarConfig('${ramo.id}', 'notaEximicion', this.value)">
+                                </div>
+                                <div class="input-group input-rescate">
+                                    <label>Peso Examen (%) <span title="Si no eximes, el examen pasa a valer esto">ℹ️</span></label>
+                                    <input type="number" value="${ramo.pesoExamen || 0}" placeholder="Ej: 30" onchange="actualizarConfig('${ramo.id}', 'pesoExamen', this.value)">
+                                </div>
+                            </div>
+                            
+                            <div class="config-row">
+                                ${!ramo.modoAvanzado ? `
+                                <div class="input-group">
+                                    <label>Peso Cátedras (%)</label>
+                                    <input type="number" value="${ramo.pesoCat}" onchange="actualizarConfig('${ramo.id}', 'pesoCat', this.value)">
+                                </div>` : ''}
+                                <div class="input-group">
+                                    <label>Cant. Cátedras</label>
+                                    <input type="number" value="${ramo.cantCat}" onchange="actualizarConfig('${ramo.id}', 'cantCat', this.value)">
+                                </div>
+                            </div>
+                            
+                            <div class="config-row">
+                                ${!ramo.modoAvanzado ? `
+                                <div class="input-group">
+                                    <label>Peso Ejercicios (%)</label>
+                                    <input type="number" value="${ramo.pesoEj}" onchange="actualizarConfig('${ramo.id}', 'pesoEj', this.value)">
+                                </div>` : ''}
+                                <div class="input-group">
+                                    <label>Cant. Ejercicios</label>
+                                    <input type="number" value="${ramo.cantEj}" onchange="actualizarConfig('${ramo.id}', 'cantEj', this.value)">
+                                </div>
+                            </div>
+                            
+                            <div class="config-row">
+                                ${!ramo.modoAvanzado ? `
+                                <div class="input-group">
+                                    <label>Peso Lab (%)</label>
+                                    <input type="number" value="${ramo.pesoLab || 0}" onchange="actualizarConfig('${ramo.id}', 'pesoLab', this.value)">
+                                </div>` : ''}
+                                <div class="input-group">
+                                    <label>Cant. Labs</label>
+                                    <input type="number" value="${ramo.cantLab || 0}" onchange="actualizarConfig('${ramo.id}', 'cantLab', this.value)">
+                                </div>
+                            </div>
+                        </div>
+
+                        ${ramo.cantCat > 0 ? `<div class="notas-subtitulo">Notas Cátedras</div><div class="notas-grid">${inputsCatHTML}</div>` : ''}
+                        ${ramo.cantEj > 0 ? `<div class="notas-subtitulo">Notas Ejercicios</div><div class="notas-grid">${inputsEjHTML}</div>` : ''}
+                        ${ramo.cantLab > 0 ? `<div class="notas-subtitulo">Notas Laboratorio</div><div class="notas-grid">${inputsLabHTML}</div>` : ''}
+                    </div>
+
+                    <div>
+                        <button class="btn btn-calc" onclick="calcularRamo('${ramo.id}')">Calcular Ramo</button>
+                        <div id="res-${ramo.id}" class="resultado-box" style="display:none;"></div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        };
+    </script>
+</body>
+</html>
