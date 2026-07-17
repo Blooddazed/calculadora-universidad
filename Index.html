@@ -98,6 +98,21 @@
         .toggle-avanzado span { font-size: 11px; font-weight: 600; color: var(--text-main); }
         .toggle-avanzado input[type="checkbox"] { width: 16px; height: 16px; accent-color: #667eea; cursor: pointer; margin-left: 8px;}
 
+        .peso-hint { font-weight: 700; color: #667eea; text-transform: none; letter-spacing: 0; font-size: 11px; }
+
+        .resumen-pesos { margin-top: 4px; background: white; border: 1.5px solid var(--border-color); border-radius: 12px; padding: 12px 14px; }
+        .resumen-barra { height: 8px; border-radius: 4px; background: #e5e7eb; overflow: hidden; margin-bottom: 8px; }
+        .resumen-barra-fill { height: 100%; width: 0%; border-radius: 4px; background: #667eea; transition: width 0.25s ease, background 0.25s ease; }
+        .resumen-texto { font-size: 12px; font-weight: 600; color: var(--text-muted); line-height: 1.4; }
+
+        .resumen-pesos-aviso { margin-top: 4px; background: #fffbeb; border: 1.5px solid #fde68a; color: #92400e; border-radius: 12px; padding: 10px 14px; font-size: 12px; font-weight: 600; line-height: 1.4; }
+
+        .pesos-ind-grid { display: flex; flex-wrap: wrap; gap: 8px; margin: -4px 0 12px 0; }
+        .peso-ind-chip { display: flex; align-items: center; gap: 4px; background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 10px; padding: 6px 8px; transition: border-color 0.2s; }
+        .peso-ind-chip:focus-within { border-color: #ef4444; }
+        .peso-ind-chip span { font-size: 11px; font-weight: 700; color: #b91c1c; }
+        .peso-ind-chip input { width: 38px; border: none; background: transparent; text-align: center; font-size: 13px; font-weight: 700; color: #b91c1c; outline: none; }
+
         .notas-subtitulo { font-size: 13px; font-weight: 700; margin-bottom: 12px; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
         .notas-subtitulo::after { content: ''; flex: 1; height: 1px; background: var(--border-color); }
 
@@ -303,24 +318,72 @@
             }
         };
 
-        window.agregarRamo = () => {
-            const nombre = prompt("Ingresa el nombre de la asignatura (ej: Cálculo, Electro):");
-            if (!nombre) return;
-
-            ramos.push({
+        // Valores por defecto de cátedra para cada tipo de ramo.
+        // Matemáticas: N1/N2/N3 = 25/30/30 (85%) + Ejercicios (promedio simple de talleres) = 15%.
+        // Física / Carrera: N1..N4 = 25/30/30/15 (sin Ejercicios).
+        function crearRamoNuevoTipo(nombre, tipo) {
+            const tieneLab = (tipo === 'fisica' || tipo === 'carrera');
+            const tieneEjercicios = (tipo === 'matematicas');
+            const cantCatDefault = tieneEjercicios ? 3 : 4;
+            const pesosCatDefault = tieneEjercicios ? [25, 30, 30] : [25, 30, 30, 15];
+            return {
                 id: Date.now().toString(),
                 nombre: nombre,
-                modoAvanzado: false,
-                aproximar: false,
-                notaEximicion: 5.5,
-                pesoExamen: 0,
-                pesoCat: 45, cantCat: 3,
-                pesoEj: 20, cantEj: 4,
-                pesoLab: 0, cantLab: 0,
-                notasCat: Array(3).fill(''), pesosCatInd: Array(3).fill(''),
-                notasEj: Array(4).fill(''), pesosEjInd: Array(4).fill(''),
-                notasLab: [], pesosLabInd: []
-            });
+                tipoRamo: tipo, // 'matematicas' | 'fisica' | 'carrera'
+                cantCat: cantCatDefault,
+                notasCat: Array(cantCatDefault).fill(''),
+                pesosCatInd: pesosCatDefault,
+                usaPAR: false,
+                notaPAR: '',
+                tieneEjercicios: tieneEjercicios,
+                cantEj: tieneEjercicios ? 3 : 0,
+                notasEj: tieneEjercicios ? Array(3).fill('') : [],
+                tieneLab: tieneLab,
+                cantLab: tieneLab ? 5 : 0,
+                notasLab: tieneLab ? Array(5).fill('') : [],
+                usaRecuperativoLab: false,
+                notaRecuperativoLab: '',
+                pesoCatPct: 70,
+                pesoLabPct: 30,
+                notaExamen: ''
+            };
+        }
+
+        window.agregarRamo = () => {
+            const nombre = prompt("Ingresa el nombre de la asignatura (ej: Cálculo II, Electromagnetismo):");
+            if (!nombre) return;
+
+            const tipoInput = prompt(
+                "¿Qué tipo de ramo es?\n\n" +
+                "1 = Matemáticas (Cálculo, Álgebra, Ec. Diferenciales, Probabilidad...)\n" +
+                "2 = Física + Laboratorio (Mecánica, Electro y Magnetismo, Ondas...)\n" +
+                "3 = Ramo de Carrera (Programación, POO, Estructura de Datos...)\n" +
+                "4 = Personalizado (configuras tú los pesos, sistema anterior)",
+                "1"
+            );
+
+            const mapa = { '1': 'matematicas', '2': 'fisica', '3': 'carrera' };
+            const tipo = mapa[(tipoInput || '').trim()];
+
+            if (tipo) {
+                ramos.push(crearRamoNuevoTipo(nombre, tipo));
+            } else {
+                // Personalizado / cancelado / opción inválida: se usa el sistema flexible anterior.
+                ramos.push({
+                    id: Date.now().toString(),
+                    nombre: nombre,
+                    modoAvanzado: false,
+                    aproximar: false,
+                    notaEximicion: 5.5,
+                    pesoExamen: 0,
+                    pesoCat: 45, cantCat: 3,
+                    pesoEj: 20, cantEj: 4,
+                    pesoLab: 0, cantLab: 0,
+                    notasCat: Array(3).fill(''), pesosCatInd: Array(3).fill(''),
+                    notasEj: Array(4).fill(''), pesosEjInd: Array(4).fill(''),
+                    notasLab: [], pesosLabInd: []
+                });
+            }
             window.guardarEnStorage();
             window.renderRamos();
         };
@@ -387,6 +450,85 @@
             window.renderRamos();
         };
 
+        // Genera los "chips" de % individual por prueba (modo Pesos Indiv.), directo en Configuración.
+        function renderPesosIndividuales(tipo, cant, pesosInd, prefix, ramoId) {
+            let html = '<div class="pesos-ind-grid">';
+            for (let i = 0; i < cant; i++) {
+                const val = (pesosInd && pesosInd[i] !== undefined && pesosInd[i] !== '') ? pesosInd[i] : '';
+                html += `<div class="peso-ind-chip">
+                    <span>${prefix}${i + 1}</span>
+                    <input type="number" id="pind-${tipo}-${ramoId}-${i}" value="${val}" placeholder="%" step="1" min="0" max="100"
+                        oninput="actualizarVistaPesos('${ramoId}')"
+                        onchange="actualizarPesoInd('${ramoId}', '${tipo}', ${i}, this.value)">
+                    <span>%</span>
+                </div>`;
+            }
+            html += '</div>';
+            return html;
+        }
+
+        // Recalcula en vivo (mientras se escribe) el % que vale cada prueba y el resumen total de pesos del ramo.
+        window.actualizarVistaPesos = (ramoId) => {
+            const ramo = ramos.find(r => r.id === ramoId);
+            if (!ramo) return;
+
+            const getVal = (id) => {
+                const el = document.getElementById(id);
+                return el ? (parseFloat(el.value) || 0) : 0;
+            };
+
+            let suma = 0;
+
+            if (!ramo.modoAvanzado) {
+                const pesoCat = getVal(`pesoCat-${ramoId}`), cantCat = getVal(`cantCat-${ramoId}`);
+                const pesoEj = getVal(`pesoEj-${ramoId}`), cantEj = getVal(`cantEj-${ramoId}`);
+                const pesoLab = getVal(`pesoLab-${ramoId}`), cantLab = getVal(`cantLab-${ramoId}`);
+
+                const setHint = (hintId, peso, cant) => {
+                    const hint = document.getElementById(hintId);
+                    if (!hint) return;
+                    if (cant > 0 && peso > 0) {
+                        hint.textContent = `≈ ${(peso / cant).toFixed(1)}% c/u`;
+                        hint.style.display = 'inline';
+                    } else {
+                        hint.style.display = 'none';
+                    }
+                };
+                setHint(`hintCat-${ramoId}`, pesoCat, cantCat);
+                setHint(`hintEj-${ramoId}`, pesoEj, cantEj);
+                setHint(`hintLab-${ramoId}`, pesoLab, cantLab);
+
+                suma = pesoCat + pesoEj + pesoLab;
+            } else {
+                const cantCat = ramo.cantCat || 0, cantEj = ramo.cantEj || 0, cantLab = ramo.cantLab || 0;
+                for (let i = 0; i < cantCat; i++) suma += getVal(`pind-cat-${ramoId}-${i}`);
+                for (let i = 0; i < cantEj; i++) suma += getVal(`pind-ej-${ramoId}-${i}`);
+                for (let i = 0; i < cantLab; i++) suma += getVal(`pind-lab-${ramoId}-${i}`);
+            }
+
+            const resumen = document.getElementById(`resumen-${ramoId}`);
+            if (!resumen) return;
+            const fill = resumen.querySelector('.resumen-barra-fill');
+            const texto = resumen.querySelector('.resumen-texto');
+
+            let color, mensaje;
+            if (suma > 100.01) {
+                color = '#ef4444';
+                mensaje = `⚠ Suman ${suma.toFixed(1)}%, te pasas por ${(suma - 100).toFixed(1)}%. Ajusta los pesos.`;
+            } else if (Math.abs(suma - 100) < 0.01) {
+                color = '#10b981';
+                mensaje = `✓ 100% asignado a presentación.`;
+            } else {
+                color = '#667eea';
+                mensaje = suma === 0
+                    ? 'Configura los pesos de cada categoría.'
+                    : `Asignaste ${suma.toFixed(1)}%. El ${(100 - suma).toFixed(1)}% restante se rendirá en el examen.`;
+            }
+
+            if (fill) { fill.style.width = `${Math.min(100, suma)}%`; fill.style.background = color; }
+            if (texto) { texto.textContent = mensaje; texto.style.color = color; }
+        };
+
         window.actualizarNota = (ramoId, tipo, index, valor) => {
             const ramo = ramos.find(r => r.id === ramoId);
             if (!ramo) return;
@@ -404,6 +546,247 @@
             if (tipo === 'ej') ramo.pesosEjInd[index] = valor !== '' ? parseFloat(valor) : '';
             if (tipo === 'lab') ramo.pesosLabInd[index] = valor !== '' ? parseFloat(valor) : '';
             window.guardarEnStorage();
+        };
+
+        // Cambia cuántas notas tiene cada categoría (cátedra/ejercicios/labs), conservando las notas ya ingresadas.
+        window.actualizarCantidad = (ramoId, categoria, valor) => {
+            const ramo = ramos.find(r => r.id === ramoId);
+            if (!ramo) return;
+            const nuevaCant = Math.max(0, parseInt(valor) || 0);
+
+            const redimensionar = (arr) => Array(nuevaCant).fill('').map((_, i) => (arr && arr[i] !== undefined) ? arr[i] : '');
+
+            if (categoria === 'cat') {
+                ramo.notasCat = redimensionar(ramo.notasCat);
+                ramo.pesosCatInd = redimensionar(ramo.pesosCatInd);
+                ramo.cantCat = nuevaCant;
+            } else if (categoria === 'ej') {
+                ramo.notasEj = redimensionar(ramo.notasEj);
+                ramo.cantEj = nuevaCant;
+            } else if (categoria === 'lab') {
+                ramo.notasLab = redimensionar(ramo.notasLab);
+                ramo.cantLab = nuevaCant;
+            }
+
+            window.guardarEnStorage();
+            window.renderRamos();
+        };
+
+        window.cambiarTipoRamo = (id, tipo) => {
+            const ramo = ramos.find(r => r.id === id);
+            if (!ramo) return;
+            const base = crearRamoNuevoTipo(ramo.nombre, tipo);
+            base.id = ramo.id;
+            ramos = ramos.map(r => r.id === id ? base : r);
+            window.guardarEnStorage();
+            window.renderRamos();
+        };
+
+        window.togglePAR = (id) => {
+            const ramo = ramos.find(r => r.id === id);
+            if (!ramo) return;
+            ramo.usaPAR = !ramo.usaPAR;
+            window.guardarEnStorage();
+            window.renderRamos();
+        };
+
+        window.toggleRecuperativoLab = (id) => {
+            const ramo = ramos.find(r => r.id === id);
+            if (!ramo) return;
+            ramo.usaRecuperativoLab = !ramo.usaRecuperativoLab;
+            window.guardarEnStorage();
+            window.renderRamos();
+        };
+
+        window.actualizarNotaPAR = (id, valor) => {
+            const ramo = ramos.find(r => r.id === id);
+            if (!ramo) return;
+            ramo.notaPAR = valor !== '' ? parseFloat(valor) : '';
+            window.guardarEnStorage();
+        };
+
+        window.actualizarNotaRecuperativoLab = (id, valor) => {
+            const ramo = ramos.find(r => r.id === id);
+            if (!ramo) return;
+            ramo.notaRecuperativoLab = valor !== '' ? parseFloat(valor) : '';
+            window.guardarEnStorage();
+        };
+
+        window.actualizarNotaExamen = (id, valor) => {
+            const ramo = ramos.find(r => r.id === id);
+            if (!ramo) return;
+            ramo.notaExamen = valor !== '' ? parseFloat(valor) : '';
+            window.guardarEnStorage();
+        };
+
+        // Mientras se escribe, mantiene Peso Cátedra + Peso Lab sumando 100 automáticamente (sin guardar aún).
+        window.sincronizarPesoCatLab = (ramoId, origen, valor) => {
+            const v = Math.min(100, Math.max(0, parseFloat(valor) || 0));
+            const otroId = origen === 'cat' ? `pesoLabPct-${ramoId}` : `pesoCatPct-${ramoId}`;
+            const otro = document.getElementById(otroId);
+            if (otro) otro.value = (100 - v).toFixed(0);
+        };
+
+        window.actualizarPesoCatLab = (id, origen, valor) => {
+            const ramo = ramos.find(r => r.id === id);
+            if (!ramo) return;
+            const v = Math.min(100, Math.max(0, parseFloat(valor) || 0));
+            if (origen === 'cat') { ramo.pesoCatPct = v; ramo.pesoLabPct = 100 - v; }
+            else { ramo.pesoLabPct = v; ramo.pesoCatPct = 100 - v; }
+            window.guardarEnStorage();
+        };
+
+        // Chips de % individual de cátedra (N1-N4 o N1-N3+Otras), con etiquetas según el tipo de ramo.
+        function renderPesosCatedra(ramo) {
+            const labels = ramo.tipoRamo === 'carrera' ? ['N1', 'N2', 'N3', 'Otras'] : ['N1', 'N2', 'N3', 'N4'];
+            let html = '<div class="pesos-ind-grid">';
+            for (let i = 0; i < ramo.cantCat; i++) {
+                const val = ramo.pesosCatInd[i] !== undefined ? ramo.pesosCatInd[i] : '';
+                html += `<div class="peso-ind-chip">
+                    <span>${labels[i] || ('N' + (i + 1))}</span>
+                    <input type="number" id="pcat-${ramo.id}-${i}" value="${val}" step="1" min="0" max="100"
+                        oninput="actualizarVistaPesosCat('${ramo.id}')"
+                        onchange="actualizarPesoInd('${ramo.id}', 'cat', ${i}, this.value)">
+                    <span>%</span>
+                </div>`;
+            }
+            html += '</div>';
+            return html;
+        }
+
+        window.actualizarVistaPesosCat = (ramoId) => {
+            const ramo = ramos.find(r => r.id === ramoId);
+            if (!ramo) return;
+            let suma = 0;
+            for (let i = 0; i < ramo.cantCat; i++) {
+                const el = document.getElementById(`pcat-${ramoId}-${i}`);
+                suma += el ? (parseFloat(el.value) || 0) : 0;
+            }
+            const target = ramo.tieneEjercicios ? 85 : 100;
+            const sufijo = ramo.tieneEjercicios ? ' (+ 15% de Ejercicios = 100% total)' : '';
+            const resumen = document.getElementById(`resumen-cat-${ramoId}`);
+            if (!resumen) return;
+            const fill = resumen.querySelector('.resumen-barra-fill');
+            const texto = resumen.querySelector('.resumen-texto');
+            let color, mensaje;
+            if (suma > target + 0.01) { color = '#ef4444'; mensaje = `⚠ Suman ${suma.toFixed(1)}%, te pasas por ${(suma - target).toFixed(1)}%${sufijo}.`; }
+            else if (Math.abs(suma - target) < 0.01) { color = '#10b981'; mensaje = `✓ ${target}% asignado en cátedra${sufijo}.`; }
+            else { color = '#667eea'; mensaje = `Suman ${suma.toFixed(1)}% de ${target}% necesario en cátedra${sufijo}.`; }
+            if (fill) { fill.style.width = `${Math.min(100, (suma / target) * 100)}%`; fill.style.background = color; }
+            if (texto) { texto.textContent = mensaje; texto.style.color = color; }
+        };
+
+        // Motor de cálculo real: Matemáticas / Física+Lab / Ramo de Carrera.
+        // Eximición >= 5.0 | Reprobación directa < 3.0 | Entre medio: derecho a examen (final = presentación*0.70 + examen*0.30, aprueba con final >= 4.0)
+        window.calcularRamoNuevo = (id) => {
+            const ramo = ramos.find(r => r.id === id);
+            if (!ramo) return;
+
+            const resBox = document.getElementById(`res-${id}`);
+            resBox.classList.remove('res-aprobado', 'res-reprobado', 'res-critico', 'res-proyeccion');
+
+            let notasCat = [...ramo.notasCat];
+            for (let i = 0; i < notasCat.length; i++) {
+                if (notasCat[i] === '' || notasCat[i] === undefined || isNaN(notasCat[i])) {
+                    alert("Completa todas las notas de cátedra antes de calcular.");
+                    return;
+                }
+            }
+
+            if (ramo.usaPAR && ramo.notaPAR !== '' && !isNaN(ramo.notaPAR)) {
+                let idxMin = 0;
+                const limite = Math.min(3, notasCat.length);
+                for (let i = 1; i < limite; i++) {
+                    if (parseFloat(notasCat[i]) < parseFloat(notasCat[idxMin])) idxMin = i;
+                }
+                if (parseFloat(ramo.notaPAR) > parseFloat(notasCat[idxMin])) {
+                    notasCat[idxMin] = parseFloat(ramo.notaPAR);
+                }
+            }
+
+            let promedioCat = 0;
+            for (let i = 0; i < notasCat.length; i++) {
+                promedioCat += parseFloat(notasCat[i]) * ((ramo.pesosCatInd[i] || 0) / 100);
+            }
+
+            let presentacion = promedioCat;
+            let notaLabCalculada = null;
+            let notaEjerciciosCalculada = null;
+
+            if (ramo.tieneEjercicios) {
+                let notasEj = [...ramo.notasEj];
+                for (let i = 0; i < notasEj.length; i++) {
+                    if (notasEj[i] === '' || notasEj[i] === undefined || isNaN(notasEj[i])) {
+                        alert("Completa todas las notas de Ejercicios (talleres) antes de calcular.");
+                        return;
+                    }
+                }
+                if (notasEj.length === 0) {
+                    alert("Configura la cantidad de notas de Ejercicios antes de calcular.");
+                    return;
+                }
+                notaEjerciciosCalculada = notasEj.reduce((a, b) => a + parseFloat(b), 0) / notasEj.length;
+                presentacion = promedioCat + notaEjerciciosCalculada * 0.15;
+            }
+
+            if (ramo.tieneLab) {
+                let notasLab = [...ramo.notasLab];
+                for (let i = 0; i < notasLab.length; i++) {
+                    if (notasLab[i] === '' || notasLab[i] === undefined || isNaN(notasLab[i])) {
+                        alert("Completa todas las notas de laboratorio antes de calcular.");
+                        return;
+                    }
+                }
+                if (ramo.usaRecuperativoLab && ramo.notaRecuperativoLab !== '' && !isNaN(ramo.notaRecuperativoLab)) {
+                    let idxMin = 0;
+                    for (let i = 1; i < notasLab.length; i++) {
+                        if (parseFloat(notasLab[i]) < parseFloat(notasLab[idxMin])) idxMin = i;
+                    }
+                    if (parseFloat(ramo.notaRecuperativoLab) > parseFloat(notasLab[idxMin])) {
+                        notasLab[idxMin] = parseFloat(ramo.notaRecuperativoLab);
+                    }
+                }
+                notaLabCalculada = notasLab.reduce((a, b) => a + parseFloat(b), 0) / notasLab.length;
+                presentacion = promedioCat * (ramo.pesoCatPct / 100) + notaLabCalculada * (ramo.pesoLabPct / 100);
+            }
+
+            let HTML = '';
+            let detalleLab = ramo.tieneLab ? ` (Cátedra: ${promedioCat.toFixed(2)} · Lab: ${notaLabCalculada.toFixed(2)})` : '';
+            if (ramo.tieneEjercicios) detalleLab = ` (Cátedra: ${promedioCat.toFixed(2)} · Ejercicios: ${notaEjerciciosCalculada.toFixed(2)})`;
+
+            if (presentacion >= 5.0) {
+                resBox.classList.add('res-aprobado');
+                HTML = `<div class="res-header">Nota de Presentación</div><span>${presentacion.toFixed(2)}</span>¡Eximido del examen! 🎉${detalleLab}`;
+            } else if (presentacion < 3.0) {
+                resBox.classList.add('res-critico');
+                HTML = `<div class="res-header">Nota de Presentación</div><span>${presentacion.toFixed(2)}</span>Ramo reprobado directamente 💀${detalleLab}`;
+            } else {
+                if (ramo.notaExamen === '' || ramo.notaExamen === undefined || isNaN(ramo.notaExamen)) {
+                    const examenNecesario = (4.0 - presentacion * 0.70) / 0.30;
+                    resBox.classList.add('res-proyeccion');
+                    HTML = `<div class="res-header">Derecho a Examen 🔮</div><span>${presentacion.toFixed(2)}</span>`;
+                    if (examenNecesario > 7.0) {
+                        HTML += `<div class="salvavidas">Necesitarías un <strong>${examenNecesario.toFixed(1)}</strong> en el examen — matemáticamente imposible. Ramo prácticamente reprobado. 💀</div>`;
+                    } else if (examenNecesario <= 1.0) {
+                        HTML += `<div class="salvavidas">Estás sobrado: incluso con un 1.0 en el examen, apruebas.</div>`;
+                    } else {
+                        HTML += `<div class="salvavidas">Necesitas un <strong>${examenNecesario.toFixed(1)}</strong> en el examen para aprobar (nota final ≥ 4.0).</div>`;
+                    }
+                } else {
+                    const notaFinal = presentacion * 0.70 + parseFloat(ramo.notaExamen) * 0.30;
+                    HTML = `<div class="res-header">Nota Final</div><span>${notaFinal.toFixed(2)}</span>`;
+                    if (notaFinal >= 4.0) {
+                        resBox.classList.add('res-aprobado');
+                        HTML += `¡Ramo aprobado! 🎉 (Presentación: ${presentacion.toFixed(2)})`;
+                    } else {
+                        resBox.classList.add('res-reprobado');
+                        HTML += `Ramo reprobado 💀 (Presentación: ${presentacion.toFixed(2)})`;
+                    }
+                }
+            }
+
+            resBox.innerHTML = HTML;
+            resBox.style.display = 'block';
         };
 
         window.calcularRamo = (id) => {
@@ -583,6 +966,120 @@
             resBox.style.display = 'block'; 
         };
 
+        function renderCardNuevo(ramo) {
+            const labelsCat = ramo.tipoRamo === 'carrera' ? ['N1', 'N2', 'N3', 'Otras'] : ['N1', 'N2', 'N3', 'N4'];
+            const inputsCatHTML = ramo.notasCat.map((nota, i) => `
+                <div class="celda-nota">
+                    <input type="number" id="cat-${ramo.id}-${i}" step="0.1" min="1" max="7" value="${nota}" placeholder="${labelsCat[i] || ('N' + (i + 1))}" onchange="actualizarNota('${ramo.id}', 'cat', ${i}, this.value)">
+                </div>`).join('');
+
+            const inputsLabHTML = ramo.tieneLab ? ramo.notasLab.map((nota, i) => `
+                <div class="celda-nota">
+                    <input type="number" id="lab-${ramo.id}-${i}" step="0.1" min="1" max="7" value="${nota}" placeholder="L${i + 1}" onchange="actualizarNota('${ramo.id}', 'lab', ${i}, this.value)">
+                </div>`).join('') : '';
+
+            const inputsEjHTML = ramo.tieneEjercicios ? ramo.notasEj.map((nota, i) => `
+                <div class="celda-nota">
+                    <input type="number" id="ej-${ramo.id}-${i}" step="0.1" min="1" max="7" value="${nota}" placeholder="T${i + 1}" onchange="actualizarNota('${ramo.id}', 'ej', ${i}, this.value)">
+                </div>`).join('') : '';
+
+            return `
+                <div>
+                    <div class="ramo-header">
+                        <input type="text" class="ramo-nombre-input" value="${ramo.nombre}" onchange="actualizarNombre('${ramo.id}', this.value)" title="Haz clic para editar el nombre">
+                        <button class="btn-delete" title="Eliminar ramo" onclick="eliminarRamo('${ramo.id}')">✕</button>
+                    </div>
+
+                    <div class="config-box">
+                        <div class="input-group" style="margin-bottom:15px;">
+                            <label>Tipo de Ramo</label>
+                            <select onchange="cambiarTipoRamo('${ramo.id}', this.value)" style="width:100%; padding:10px 12px; border:1.5px solid var(--border-color); border-radius:10px; font-size:14px; background:white; box-sizing:border-box;">
+                                <option value="matematicas" ${ramo.tipoRamo === 'matematicas' ? 'selected' : ''}>📐 Matemáticas (solo cátedra)</option>
+                                <option value="fisica" ${ramo.tipoRamo === 'fisica' ? 'selected' : ''}>⚛️ Física + Laboratorio</option>
+                                <option value="carrera" ${ramo.tipoRamo === 'carrera' ? 'selected' : ''}>💻 Ramo de Carrera</option>
+                            </select>
+                        </div>
+
+                        <label class="toggle-avanzado" style="margin-bottom:15px;" title="Reemplaza tu nota más baja entre N1-N3">
+                            <span>🃏 Tengo derecho a prueba PAR</span>
+                            <input type="checkbox" onchange="togglePAR('${ramo.id}')" ${ramo.usaPAR ? 'checked' : ''}>
+                        </label>
+
+                        <div class="config-row">
+                            <div class="input-group">
+                                <label>Cant. Notas Cátedra</label>
+                                <input type="number" min="0" value="${ramo.cantCat}" onchange="actualizarCantidad('${ramo.id}','cat',this.value)">
+                            </div>
+                            ${ramo.tieneEjercicios ? `
+                            <div class="input-group">
+                                <label>Cant. Ejercicios</label>
+                                <input type="number" min="0" value="${ramo.cantEj}" onchange="actualizarCantidad('${ramo.id}','ej',this.value)">
+                            </div>` : ''}
+                            ${ramo.tieneLab ? `
+                            <div class="input-group">
+                                <label>Cant. Laboratorios</label>
+                                <input type="number" min="0" value="${ramo.cantLab}" onchange="actualizarCantidad('${ramo.id}','lab',this.value)">
+                            </div>` : ''}
+                        </div>
+
+                        <div class="notas-subtitulo">Cátedra (% de cada nota)</div>
+                        ${renderPesosCatedra(ramo)}
+                        <div class="resumen-pesos" id="resumen-cat-${ramo.id}">
+                            <div class="resumen-barra"><div class="resumen-barra-fill"></div></div>
+                            <div class="resumen-texto">Configura los pesos.</div>
+                        </div>
+
+                        ${ramo.tieneLab ? `
+                        <label class="toggle-avanzado" style="margin:15px 0;" title="Reemplaza tu nota más baja del laboratorio">
+                            <span>🔁 Tengo Recuperativo de Lab</span>
+                            <input type="checkbox" onchange="toggleRecuperativoLab('${ramo.id}')" ${ramo.usaRecuperativoLab ? 'checked' : ''}>
+                        </label>
+                        <div class="config-row">
+                            <div class="input-group">
+                                <label>Peso Cátedra (%)</label>
+                                <input type="number" id="pesoCatPct-${ramo.id}" value="${ramo.pesoCatPct}" oninput="sincronizarPesoCatLab('${ramo.id}','cat',this.value)" onchange="actualizarPesoCatLab('${ramo.id}','cat',this.value)">
+                            </div>
+                            <div class="input-group">
+                                <label>Peso Laboratorio (%)</label>
+                                <input type="number" id="pesoLabPct-${ramo.id}" value="${ramo.pesoLabPct}" oninput="sincronizarPesoCatLab('${ramo.id}','lab',this.value)" onchange="actualizarPesoCatLab('${ramo.id}','lab',this.value)">
+                            </div>
+                        </div>` : ''}
+                    </div>
+
+                    <div class="notas-subtitulo">Notas de Cátedra</div>
+                    <div class="notas-grid">${inputsCatHTML}</div>
+                    ${ramo.usaPAR ? `
+                    <div class="notas-subtitulo">Prueba PAR</div>
+                    <div class="notas-grid">
+                        <div class="celda-nota input-especial"><input type="number" step="0.1" min="1" max="7" value="${ramo.notaPAR}" placeholder="PAR" onchange="actualizarNotaPAR('${ramo.id}', this.value)"></div>
+                    </div>` : ''}
+
+                    ${ramo.tieneEjercicios ? `
+                    <div class="notas-subtitulo">Ejercicios (Talleres) — promedio simple, 15%</div>
+                    <div class="notas-grid">${inputsEjHTML}</div>` : ''}
+
+                    ${ramo.tieneLab ? `
+                    <div class="notas-subtitulo">Notas de Laboratorio</div>
+                    <div class="notas-grid">${inputsLabHTML}</div>
+                    ${ramo.usaRecuperativoLab ? `
+                    <div class="notas-subtitulo">Recuperativo Lab</div>
+                    <div class="notas-grid">
+                        <div class="celda-nota input-especial"><input type="number" step="0.1" min="1" max="7" value="${ramo.notaRecuperativoLab}" placeholder="Rec." onchange="actualizarNotaRecuperativoLab('${ramo.id}', this.value)"></div>
+                    </div>` : ''}` : ''}
+
+                    <div class="notas-subtitulo">Examen (déjalo en blanco para saber qué necesitas)</div>
+                    <div class="notas-grid">
+                        <div class="celda-nota input-rescate"><input type="number" step="0.1" min="1" max="7" value="${ramo.notaExamen}" placeholder="Examen" onchange="actualizarNotaExamen('${ramo.id}', this.value)"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <button class="btn btn-calc" onclick="calcularRamoNuevo('${ramo.id}')">Calcular Ramo</button>
+                    <div id="res-${ramo.id}" class="resultado-box" style="display:none;"></div>
+                </div>
+            `;
+        }
+
         window.renderRamos = () => {
             const grid = document.getElementById('grid-ramos');
             grid.innerHTML = '';
@@ -597,28 +1094,28 @@
             }
 
             ramos.forEach(ramo => {
-                const renderNotasInputs = (tipo, arrNotas, arrPesos, placeholderPrefix) => {
+                if (ramo.tipoRamo) {
+                    const cardNuevo = document.createElement('div');
+                    cardNuevo.className = 'ramo-card';
+                    cardNuevo.innerHTML = renderCardNuevo(ramo);
+                    grid.appendChild(cardNuevo);
+                    window.actualizarVistaPesosCat(ramo.id);
+                    return;
+                }
+
+                const renderNotasInputs = (tipo, arrNotas, placeholderPrefix) => {
                     let html = '';
                     arrNotas.forEach((nota, index) => {
-                        const pesoValue = arrPesos ? arrPesos[index] : '';
-                        
                         html += `<div class="celda-nota">
-                            <input type="number" id="${tipo}-${ramo.id}-${index}" step="0.1" min="1" max="7" value="${nota}" placeholder="${placeholderPrefix}${index+1}" onchange="actualizarNota('${ramo.id}', '${tipo}', ${index}, this.value)">`;
-                            
-                        if (ramo.modoAvanzado) {
-                            html += `<div class="peso-ind-wrapper" title="Ingresa el % que vale esta nota individual">
-                                <input type="number" step="1" min="0" max="100" value="${pesoValue}" placeholder="Ej: 20" onchange="actualizarPesoInd('${ramo.id}', '${tipo}', ${index}, this.value)">
-                                <span>%</span>
-                            </div>`;
-                        }
-                        html += `</div>`;
+                            <input type="number" id="${tipo}-${ramo.id}-${index}" step="0.1" min="1" max="7" value="${nota}" placeholder="${placeholderPrefix}${index+1}" onchange="actualizarNota('${ramo.id}', '${tipo}', ${index}, this.value)">
+                        </div>`;
                     });
                     return html;
                 };
 
-                const inputsCatHTML = renderNotasInputs('cat', ramo.notasCat, ramo.pesosCatInd, 'C');
-                const inputsEjHTML = renderNotasInputs('ej', ramo.notasEj, ramo.pesosEjInd, 'E');
-                const inputsLabHTML = ramo.cantLab > 0 ? renderNotasInputs('lab', ramo.notasLab, ramo.pesosLabInd, 'L') : '';
+                const inputsCatHTML = renderNotasInputs('cat', ramo.notasCat, 'C');
+                const inputsEjHTML = renderNotasInputs('ej', ramo.notasEj, 'E');
+                const inputsLabHTML = ramo.cantLab > 0 ? renderNotasInputs('lab', ramo.notasLab, 'L') : '';
 
                 const card = document.createElement('div');
                 card.className = 'ramo-card';
@@ -656,36 +1153,44 @@
                                 ${!ramo.modoAvanzado ? `
                                 <div class="input-group">
                                     <label>Peso Cátedras (%)</label>
-                                    <input type="number" value="${ramo.pesoCat}" onchange="actualizarConfig('${ramo.id}', 'pesoCat', this.value)">
+                                    <input type="number" id="pesoCat-${ramo.id}" value="${ramo.pesoCat}" oninput="actualizarVistaPesos('${ramo.id}')" onchange="actualizarConfig('${ramo.id}', 'pesoCat', this.value)">
                                 </div>` : ''}
                                 <div class="input-group">
-                                    <label>Cant. Cátedras</label>
-                                    <input type="number" value="${ramo.cantCat}" onchange="actualizarConfig('${ramo.id}', 'cantCat', this.value)">
+                                    <label>Cant. Cátedras ${!ramo.modoAvanzado ? `<span class="peso-hint" id="hintCat-${ramo.id}"></span>` : ''}</label>
+                                    <input type="number" id="cantCat-${ramo.id}" value="${ramo.cantCat}" oninput="actualizarVistaPesos('${ramo.id}')" onchange="actualizarConfig('${ramo.id}', 'cantCat', this.value)">
                                 </div>
                             </div>
+                            ${ramo.modoAvanzado && ramo.cantCat > 0 ? renderPesosIndividuales('cat', ramo.cantCat, ramo.pesosCatInd, 'N', ramo.id) : ''}
                             
                             <div class="config-row">
                                 ${!ramo.modoAvanzado ? `
                                 <div class="input-group">
                                     <label>Peso Ejercicios (%)</label>
-                                    <input type="number" value="${ramo.pesoEj}" onchange="actualizarConfig('${ramo.id}', 'pesoEj', this.value)">
+                                    <input type="number" id="pesoEj-${ramo.id}" value="${ramo.pesoEj}" oninput="actualizarVistaPesos('${ramo.id}')" onchange="actualizarConfig('${ramo.id}', 'pesoEj', this.value)">
                                 </div>` : ''}
                                 <div class="input-group">
-                                    <label>Cant. Ejercicios</label>
-                                    <input type="number" value="${ramo.cantEj}" onchange="actualizarConfig('${ramo.id}', 'cantEj', this.value)">
+                                    <label>Cant. Ejercicios ${!ramo.modoAvanzado ? `<span class="peso-hint" id="hintEj-${ramo.id}"></span>` : ''}</label>
+                                    <input type="number" id="cantEj-${ramo.id}" value="${ramo.cantEj}" oninput="actualizarVistaPesos('${ramo.id}')" onchange="actualizarConfig('${ramo.id}', 'cantEj', this.value)">
                                 </div>
                             </div>
+                            ${ramo.modoAvanzado && ramo.cantEj > 0 ? renderPesosIndividuales('ej', ramo.cantEj, ramo.pesosEjInd, 'E', ramo.id) : ''}
                             
                             <div class="config-row">
                                 ${!ramo.modoAvanzado ? `
                                 <div class="input-group">
                                     <label>Peso Lab (%)</label>
-                                    <input type="number" value="${ramo.pesoLab || 0}" onchange="actualizarConfig('${ramo.id}', 'pesoLab', this.value)">
+                                    <input type="number" id="pesoLab-${ramo.id}" value="${ramo.pesoLab || 0}" oninput="actualizarVistaPesos('${ramo.id}')" onchange="actualizarConfig('${ramo.id}', 'pesoLab', this.value)">
                                 </div>` : ''}
                                 <div class="input-group">
-                                    <label>Cant. Labs</label>
-                                    <input type="number" value="${ramo.cantLab || 0}" onchange="actualizarConfig('${ramo.id}', 'cantLab', this.value)">
+                                    <label>Cant. Labs ${!ramo.modoAvanzado ? `<span class="peso-hint" id="hintLab-${ramo.id}"></span>` : ''}</label>
+                                    <input type="number" id="cantLab-${ramo.id}" value="${ramo.cantLab || 0}" oninput="actualizarVistaPesos('${ramo.id}')" onchange="actualizarConfig('${ramo.id}', 'cantLab', this.value)">
                                 </div>
+                            </div>
+                            ${ramo.modoAvanzado && ramo.cantLab > 0 ? renderPesosIndividuales('lab', ramo.cantLab, ramo.pesosLabInd, 'L', ramo.id) : ''}
+
+                            <div class="resumen-pesos" id="resumen-${ramo.id}">
+                                <div class="resumen-barra"><div class="resumen-barra-fill"></div></div>
+                                <div class="resumen-texto">Configura los pesos de cada categoría.</div>
                             </div>
                         </div>
 
@@ -700,6 +1205,7 @@
                     </div>
                 `;
                 grid.appendChild(card);
+                window.actualizarVistaPesos(ramo.id);
             });
         };
     </script>
