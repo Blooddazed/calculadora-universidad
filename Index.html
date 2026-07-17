@@ -98,21 +98,6 @@
         .toggle-avanzado span { font-size: 11px; font-weight: 600; color: var(--text-main); }
         .toggle-avanzado input[type="checkbox"] { width: 16px; height: 16px; accent-color: #667eea; cursor: pointer; margin-left: 8px;}
 
-        .peso-hint { font-weight: 700; color: #667eea; text-transform: none; letter-spacing: 0; font-size: 11px; }
-
-        .resumen-pesos { margin-top: 4px; background: white; border: 1.5px solid var(--border-color); border-radius: 12px; padding: 12px 14px; }
-        .resumen-barra { height: 8px; border-radius: 4px; background: #e5e7eb; overflow: hidden; margin-bottom: 8px; }
-        .resumen-barra-fill { height: 100%; width: 0%; border-radius: 4px; background: #667eea; transition: width 0.25s ease, background 0.25s ease; }
-        .resumen-texto { font-size: 12px; font-weight: 600; color: var(--text-muted); line-height: 1.4; }
-
-        .resumen-pesos-aviso { margin-top: 4px; background: #fffbeb; border: 1.5px solid #fde68a; color: #92400e; border-radius: 12px; padding: 10px 14px; font-size: 12px; font-weight: 600; line-height: 1.4; }
-
-        .pesos-ind-grid { display: flex; flex-wrap: wrap; gap: 8px; margin: -4px 0 12px 0; }
-        .peso-ind-chip { display: flex; align-items: center; gap: 4px; background: #fef2f2; border: 1.5px solid #fecaca; border-radius: 10px; padding: 6px 8px; transition: border-color 0.2s; }
-        .peso-ind-chip:focus-within { border-color: #ef4444; }
-        .peso-ind-chip span { font-size: 11px; font-weight: 700; color: #b91c1c; }
-        .peso-ind-chip input { width: 38px; border: none; background: transparent; text-align: center; font-size: 13px; font-weight: 700; color: #b91c1c; outline: none; }
-
         .notas-subtitulo { font-size: 13px; font-weight: 700; margin-bottom: 12px; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
         .notas-subtitulo::after { content: ''; flex: 1; height: 1px; background: var(--border-color); }
 
@@ -402,85 +387,6 @@
             window.renderRamos();
         };
 
-        // Genera los "chips" de % individual por prueba (modo Pesos Indiv.), directo en Configuración.
-        function renderPesosIndividuales(tipo, cant, pesosInd, prefix, ramoId) {
-            let html = '<div class="pesos-ind-grid">';
-            for (let i = 0; i < cant; i++) {
-                const val = (pesosInd && pesosInd[i] !== undefined && pesosInd[i] !== '') ? pesosInd[i] : '';
-                html += `<div class="peso-ind-chip">
-                    <span>${prefix}${i + 1}</span>
-                    <input type="number" id="pind-${tipo}-${ramoId}-${i}" value="${val}" placeholder="%" step="1" min="0" max="100"
-                        oninput="actualizarVistaPesos('${ramoId}')"
-                        onchange="actualizarPesoInd('${ramoId}', '${tipo}', ${i}, this.value)">
-                    <span>%</span>
-                </div>`;
-            }
-            html += '</div>';
-            return html;
-        }
-
-        // Recalcula en vivo (mientras se escribe) el % que vale cada prueba y el resumen total de pesos del ramo.
-        window.actualizarVistaPesos = (ramoId) => {
-            const ramo = ramos.find(r => r.id === ramoId);
-            if (!ramo) return;
-
-            const getVal = (id) => {
-                const el = document.getElementById(id);
-                return el ? (parseFloat(el.value) || 0) : 0;
-            };
-
-            let suma = 0;
-
-            if (!ramo.modoAvanzado) {
-                const pesoCat = getVal(`pesoCat-${ramoId}`), cantCat = getVal(`cantCat-${ramoId}`);
-                const pesoEj = getVal(`pesoEj-${ramoId}`), cantEj = getVal(`cantEj-${ramoId}`);
-                const pesoLab = getVal(`pesoLab-${ramoId}`), cantLab = getVal(`cantLab-${ramoId}`);
-
-                const setHint = (hintId, peso, cant) => {
-                    const hint = document.getElementById(hintId);
-                    if (!hint) return;
-                    if (cant > 0 && peso > 0) {
-                        hint.textContent = `≈ ${(peso / cant).toFixed(1)}% c/u`;
-                        hint.style.display = 'inline';
-                    } else {
-                        hint.style.display = 'none';
-                    }
-                };
-                setHint(`hintCat-${ramoId}`, pesoCat, cantCat);
-                setHint(`hintEj-${ramoId}`, pesoEj, cantEj);
-                setHint(`hintLab-${ramoId}`, pesoLab, cantLab);
-
-                suma = pesoCat + pesoEj + pesoLab;
-            } else {
-                const cantCat = ramo.cantCat || 0, cantEj = ramo.cantEj || 0, cantLab = ramo.cantLab || 0;
-                for (let i = 0; i < cantCat; i++) suma += getVal(`pind-cat-${ramoId}-${i}`);
-                for (let i = 0; i < cantEj; i++) suma += getVal(`pind-ej-${ramoId}-${i}`);
-                for (let i = 0; i < cantLab; i++) suma += getVal(`pind-lab-${ramoId}-${i}`);
-            }
-
-            const resumen = document.getElementById(`resumen-${ramoId}`);
-            if (!resumen) return;
-            const fill = resumen.querySelector('.resumen-barra-fill');
-            const texto = resumen.querySelector('.resumen-texto');
-
-            let color, mensaje;
-            if (suma > 100.01) {
-                color = '#ef4444';
-                mensaje = `⚠ Suman ${suma.toFixed(1)}%, te pasas por ${(suma - 100).toFixed(1)}%. Ajusta los pesos.`;
-            } else if (Math.abs(suma - 100) < 0.01) {
-                color = '#10b981';
-                mensaje = `✓ 100% asignado a presentación.`;
-            } else {
-                color = '#667eea';
-                mensaje = suma === 0
-                    ? 'Configura los pesos de cada categoría.'
-                    : `Asignaste ${suma.toFixed(1)}%. El ${(100 - suma).toFixed(1)}% restante se rendirá en el examen.`;
-            }
-
-            if (fill) { fill.style.width = `${Math.min(100, suma)}%`; fill.style.background = color; }
-            if (texto) { texto.textContent = mensaje; texto.style.color = color; }
-        };
-
         window.actualizarNota = (ramoId, tipo, index, valor) => {
             const ramo = ramos.find(r => r.id === ramoId);
             if (!ramo) return;
@@ -691,19 +597,28 @@
             }
 
             ramos.forEach(ramo => {
-                const renderNotasInputs = (tipo, arrNotas, placeholderPrefix) => {
+                const renderNotasInputs = (tipo, arrNotas, arrPesos, placeholderPrefix) => {
                     let html = '';
                     arrNotas.forEach((nota, index) => {
+                        const pesoValue = arrPesos ? arrPesos[index] : '';
+                        
                         html += `<div class="celda-nota">
-                            <input type="number" id="${tipo}-${ramo.id}-${index}" step="0.1" min="1" max="7" value="${nota}" placeholder="${placeholderPrefix}${index+1}" onchange="actualizarNota('${ramo.id}', '${tipo}', ${index}, this.value)">
-                        </div>`;
+                            <input type="number" id="${tipo}-${ramo.id}-${index}" step="0.1" min="1" max="7" value="${nota}" placeholder="${placeholderPrefix}${index+1}" onchange="actualizarNota('${ramo.id}', '${tipo}', ${index}, this.value)">`;
+                            
+                        if (ramo.modoAvanzado) {
+                            html += `<div class="peso-ind-wrapper" title="Ingresa el % que vale esta nota individual">
+                                <input type="number" step="1" min="0" max="100" value="${pesoValue}" placeholder="Ej: 20" onchange="actualizarPesoInd('${ramo.id}', '${tipo}', ${index}, this.value)">
+                                <span>%</span>
+                            </div>`;
+                        }
+                        html += `</div>`;
                     });
                     return html;
                 };
 
-                const inputsCatHTML = renderNotasInputs('cat', ramo.notasCat, 'C');
-                const inputsEjHTML = renderNotasInputs('ej', ramo.notasEj, 'E');
-                const inputsLabHTML = ramo.cantLab > 0 ? renderNotasInputs('lab', ramo.notasLab, 'L') : '';
+                const inputsCatHTML = renderNotasInputs('cat', ramo.notasCat, ramo.pesosCatInd, 'C');
+                const inputsEjHTML = renderNotasInputs('ej', ramo.notasEj, ramo.pesosEjInd, 'E');
+                const inputsLabHTML = ramo.cantLab > 0 ? renderNotasInputs('lab', ramo.notasLab, ramo.pesosLabInd, 'L') : '';
 
                 const card = document.createElement('div');
                 card.className = 'ramo-card';
@@ -741,44 +656,36 @@
                                 ${!ramo.modoAvanzado ? `
                                 <div class="input-group">
                                     <label>Peso Cátedras (%)</label>
-                                    <input type="number" id="pesoCat-${ramo.id}" value="${ramo.pesoCat}" oninput="actualizarVistaPesos('${ramo.id}')" onchange="actualizarConfig('${ramo.id}', 'pesoCat', this.value)">
+                                    <input type="number" value="${ramo.pesoCat}" onchange="actualizarConfig('${ramo.id}', 'pesoCat', this.value)">
                                 </div>` : ''}
                                 <div class="input-group">
-                                    <label>Cant. Cátedras ${!ramo.modoAvanzado ? `<span class="peso-hint" id="hintCat-${ramo.id}"></span>` : ''}</label>
-                                    <input type="number" id="cantCat-${ramo.id}" value="${ramo.cantCat}" oninput="actualizarVistaPesos('${ramo.id}')" onchange="actualizarConfig('${ramo.id}', 'cantCat', this.value)">
+                                    <label>Cant. Cátedras</label>
+                                    <input type="number" value="${ramo.cantCat}" onchange="actualizarConfig('${ramo.id}', 'cantCat', this.value)">
                                 </div>
                             </div>
-                            ${ramo.modoAvanzado && ramo.cantCat > 0 ? renderPesosIndividuales('cat', ramo.cantCat, ramo.pesosCatInd, 'N', ramo.id) : ''}
                             
                             <div class="config-row">
                                 ${!ramo.modoAvanzado ? `
                                 <div class="input-group">
                                     <label>Peso Ejercicios (%)</label>
-                                    <input type="number" id="pesoEj-${ramo.id}" value="${ramo.pesoEj}" oninput="actualizarVistaPesos('${ramo.id}')" onchange="actualizarConfig('${ramo.id}', 'pesoEj', this.value)">
+                                    <input type="number" value="${ramo.pesoEj}" onchange="actualizarConfig('${ramo.id}', 'pesoEj', this.value)">
                                 </div>` : ''}
                                 <div class="input-group">
-                                    <label>Cant. Ejercicios ${!ramo.modoAvanzado ? `<span class="peso-hint" id="hintEj-${ramo.id}"></span>` : ''}</label>
-                                    <input type="number" id="cantEj-${ramo.id}" value="${ramo.cantEj}" oninput="actualizarVistaPesos('${ramo.id}')" onchange="actualizarConfig('${ramo.id}', 'cantEj', this.value)">
+                                    <label>Cant. Ejercicios</label>
+                                    <input type="number" value="${ramo.cantEj}" onchange="actualizarConfig('${ramo.id}', 'cantEj', this.value)">
                                 </div>
                             </div>
-                            ${ramo.modoAvanzado && ramo.cantEj > 0 ? renderPesosIndividuales('ej', ramo.cantEj, ramo.pesosEjInd, 'E', ramo.id) : ''}
                             
                             <div class="config-row">
                                 ${!ramo.modoAvanzado ? `
                                 <div class="input-group">
                                     <label>Peso Lab (%)</label>
-                                    <input type="number" id="pesoLab-${ramo.id}" value="${ramo.pesoLab || 0}" oninput="actualizarVistaPesos('${ramo.id}')" onchange="actualizarConfig('${ramo.id}', 'pesoLab', this.value)">
+                                    <input type="number" value="${ramo.pesoLab || 0}" onchange="actualizarConfig('${ramo.id}', 'pesoLab', this.value)">
                                 </div>` : ''}
                                 <div class="input-group">
-                                    <label>Cant. Labs ${!ramo.modoAvanzado ? `<span class="peso-hint" id="hintLab-${ramo.id}"></span>` : ''}</label>
-                                    <input type="number" id="cantLab-${ramo.id}" value="${ramo.cantLab || 0}" oninput="actualizarVistaPesos('${ramo.id}')" onchange="actualizarConfig('${ramo.id}', 'cantLab', this.value)">
+                                    <label>Cant. Labs</label>
+                                    <input type="number" value="${ramo.cantLab || 0}" onchange="actualizarConfig('${ramo.id}', 'cantLab', this.value)">
                                 </div>
-                            </div>
-                            ${ramo.modoAvanzado && ramo.cantLab > 0 ? renderPesosIndividuales('lab', ramo.cantLab, ramo.pesosLabInd, 'L', ramo.id) : ''}
-
-                            <div class="resumen-pesos" id="resumen-${ramo.id}">
-                                <div class="resumen-barra"><div class="resumen-barra-fill"></div></div>
-                                <div class="resumen-texto">Configura los pesos de cada categoría.</div>
                             </div>
                         </div>
 
@@ -793,7 +700,6 @@
                     </div>
                 `;
                 grid.appendChild(card);
-                window.actualizarVistaPesos(ramo.id);
             });
         };
     </script>
