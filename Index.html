@@ -318,26 +318,22 @@
             }
         };
 
-        // Valores por defecto de cátedra para cada tipo de ramo.
-        // Matemáticas: N1/N2/N3 = 25/30/30 (85%) + Ejercicios (promedio simple de talleres) = 15%.
-        // Física / Carrera: N1..N4 = 25/30/30/15 (sin Ejercicios).
+        // Valores por defecto: Cátedra N1/N2/N3 = 25/30/30 (85%) + Ejercicios (talleres, promedio simple) = 15%, para los 3 tipos.
+        // Física y Carrera además combinan ese "Promedio" con Laboratorio (70/30 por defecto).
         function crearRamoNuevoTipo(nombre, tipo) {
             const tieneLab = (tipo === 'fisica' || tipo === 'carrera');
-            const tieneEjercicios = (tipo === 'matematicas');
-            const cantCatDefault = tieneEjercicios ? 3 : 4;
-            const pesosCatDefault = tieneEjercicios ? [25, 30, 30] : [25, 30, 30, 15];
             return {
                 id: Date.now().toString(),
                 nombre: nombre,
                 tipoRamo: tipo, // 'matematicas' | 'fisica' | 'carrera'
-                cantCat: cantCatDefault,
-                notasCat: Array(cantCatDefault).fill(''),
-                pesosCatInd: pesosCatDefault,
+                cantCat: 3,
+                notasCat: Array(3).fill(''),
+                pesosCatInd: [25, 30, 30],
                 usaPAR: false,
                 notaPAR: '',
-                tieneEjercicios: tieneEjercicios,
-                cantEj: tieneEjercicios ? 3 : 0,
-                notasEj: tieneEjercicios ? Array(3).fill('') : [],
+                tieneEjercicios: true,
+                cantEj: 3,
+                notasEj: Array(3).fill(''),
                 tieneLab: tieneLab,
                 cantLab: tieneLab ? 5 : 0,
                 notasLab: tieneLab ? Array(5).fill('') : [],
@@ -638,7 +634,7 @@
 
         // Chips de % individual de cátedra (N1-N4 o N1-N3+Otras), con etiquetas según el tipo de ramo.
         function renderPesosCatedra(ramo) {
-            const labels = ramo.tipoRamo === 'carrera' ? ['N1', 'N2', 'N3', 'Otras'] : ['N1', 'N2', 'N3', 'N4'];
+            const labels = ['N1', 'N2', 'N3'];
             let html = '<div class="pesos-ind-grid">';
             for (let i = 0; i < ramo.cantCat; i++) {
                 const val = ramo.pesosCatInd[i] !== undefined ? ramo.pesosCatInd[i] : '';
@@ -685,81 +681,142 @@
             const resBox = document.getElementById(`res-${id}`);
             resBox.classList.remove('res-aprobado', 'res-reprobado', 'res-critico', 'res-proyeccion');
 
+            // PAR: reemplaza (solo si conviene) la nota más baja entre N1-N3 antes de todo lo demás.
             let notasCat = [...ramo.notasCat];
-            for (let i = 0; i < notasCat.length; i++) {
-                if (notasCat[i] === '' || notasCat[i] === undefined || isNaN(notasCat[i])) {
-                    alert("Completa todas las notas de cátedra antes de calcular.");
-                    return;
-                }
-            }
-
             if (ramo.usaPAR && ramo.notaPAR !== '' && !isNaN(ramo.notaPAR)) {
                 let idxMin = 0;
                 const limite = Math.min(3, notasCat.length);
-                for (let i = 1; i < limite; i++) {
-                    if (parseFloat(notasCat[i]) < parseFloat(notasCat[idxMin])) idxMin = i;
+                let hayBaseValida = false;
+                for (let i = 0; i < limite; i++) {
+                    if (notasCat[i] !== '' && !isNaN(notasCat[i])) {
+                        if (!hayBaseValida || parseFloat(notasCat[i]) < parseFloat(notasCat[idxMin])) idxMin = i;
+                        hayBaseValida = true;
+                    }
                 }
-                if (parseFloat(ramo.notaPAR) > parseFloat(notasCat[idxMin])) {
+                if (hayBaseValida && parseFloat(ramo.notaPAR) > parseFloat(notasCat[idxMin])) {
                     notasCat[idxMin] = parseFloat(ramo.notaPAR);
                 }
             }
 
-            let promedioCat = 0;
-            for (let i = 0; i < notasCat.length; i++) {
-                promedioCat += parseFloat(notasCat[i]) * ((ramo.pesosCatInd[i] || 0) / 100);
-            }
-
-            let presentacion = promedioCat;
-            let notaLabCalculada = null;
-            let notaEjerciciosCalculada = null;
-
-            if (ramo.tieneEjercicios) {
-                let notasEj = [...ramo.notasEj];
-                for (let i = 0; i < notasEj.length; i++) {
-                    if (notasEj[i] === '' || notasEj[i] === undefined || isNaN(notasEj[i])) {
-                        alert("Completa todas las notas de Ejercicios (talleres) antes de calcular.");
-                        return;
+            // Recuperativo Lab: mismo criterio, sobre la nota más baja del laboratorio.
+            let notasLab = ramo.tieneLab ? [...ramo.notasLab] : [];
+            if (ramo.tieneLab && ramo.usaRecuperativoLab && ramo.notaRecuperativoLab !== '' && !isNaN(ramo.notaRecuperativoLab)) {
+                let idxMin = 0;
+                let hayBaseValida = false;
+                for (let i = 0; i < notasLab.length; i++) {
+                    if (notasLab[i] !== '' && !isNaN(notasLab[i])) {
+                        if (!hayBaseValida || parseFloat(notasLab[i]) < parseFloat(notasLab[idxMin])) idxMin = i;
+                        hayBaseValida = true;
                     }
                 }
-                if (notasEj.length === 0) {
-                    alert("Configura la cantidad de notas de Ejercicios antes de calcular.");
+                if (hayBaseValida && parseFloat(ramo.notaRecuperativoLab) > parseFloat(notasLab[idxMin])) {
+                    notasLab[idxMin] = parseFloat(ramo.notaRecuperativoLab);
+                }
+            }
+
+            // El bloque Cátedra+Ejercicios ("Promedio") pesa 100% si no hay lab, o pesoCatPct% si lo hay.
+            const escalaCat = ramo.tieneLab ? (ramo.pesoCatPct / 100) : 1;
+
+            let conocido = 0;   // suma ponderada de lo ya ingresado, sobre la escala de la nota de presentación
+            let pesoVacio = 0;  // peso total (0-1) de las casillas aún vacías
+            let hayVacios = false;
+
+            // Cátedra
+            for (let i = 0; i < ramo.cantCat; i++) {
+                const peso = ((ramo.pesosCatInd[i] || 0) / 100) * escalaCat;
+                const n = notasCat[i];
+                if (n === '' || n === undefined || isNaN(n)) { pesoVacio += peso; hayVacios = true; }
+                else conocido += parseFloat(n) * peso;
+            }
+
+            // Ejercicios (promedio simple de talleres), 15% repartido en partes iguales
+            if (ramo.tieneEjercicios && ramo.cantEj > 0) {
+                const pesoPorTaller = (0.15 * escalaCat) / ramo.cantEj;
+                for (let i = 0; i < ramo.cantEj; i++) {
+                    const n = ramo.notasEj[i];
+                    if (n === '' || n === undefined || isNaN(n)) { pesoVacio += pesoPorTaller; hayVacios = true; }
+                    else conocido += parseFloat(n) * pesoPorTaller;
+                }
+            }
+
+            // Laboratorio (promedio simple), pesoLabPct% repartido en partes iguales
+            if (ramo.tieneLab && ramo.cantLab > 0) {
+                const pesoPorLab = (ramo.pesoLabPct / 100) / ramo.cantLab;
+                for (let i = 0; i < ramo.cantLab; i++) {
+                    const n = notasLab[i];
+                    if (n === '' || n === undefined || isNaN(n)) { pesoVacio += pesoPorLab; hayVacios = true; }
+                    else conocido += parseFloat(n) * pesoPorLab;
+                }
+            }
+
+            // ======= MODO PREDICTIVO: quedan casillas vacías =======
+            if (hayVacios) {
+                if (pesoVacio === 0) {
+                    alert("Hay casillas vacías pero no tienen peso asignado (revisa % de cátedra en 0). No se puede proyectar.");
                     return;
                 }
-                notaEjerciciosCalculada = notasEj.reduce((a, b) => a + parseFloat(b), 0) / notasEj.length;
-                presentacion = promedioCat + notaEjerciciosCalculada * 0.15;
+
+                const notaParaEximir = (5.0 - conocido) / pesoVacio;
+                const notaParaExamen = (3.0 - conocido) / pesoVacio;
+                const notaARellenar = (notaParaEximir <= 7.0) ? notaParaEximir : notaParaExamen;
+
+                const rellenar = (tipo, cant) => {
+                    for (let i = 0; i < cant; i++) {
+                        const el = document.getElementById(`${tipo}-${id}-${i}`);
+                        if (el && el.value === '') {
+                            el.value = notaARellenar.toFixed(1);
+                            el.classList.add('nota-predicha');
+                        }
+                    }
+                };
+                rellenar('cat', ramo.cantCat);
+                if (ramo.tieneEjercicios) rellenar('ej', ramo.cantEj);
+                if (ramo.tieneLab) rellenar('lab', ramo.cantLab);
+
+                resBox.classList.add('res-proyeccion');
+                let HTML = `<div class="res-header">Modo Predictivo 🔮</div>`;
+
+                if (notaParaEximir > 7.0 && notaParaExamen > 7.0) {
+                    HTML += `<span>Reprobado 💀</span><div class="salvavidas">Ni sacándote un 7.0 en todo lo que falta alcanzas el 3.0 mínimo para tener derecho a examen.</div>`;
+                } else if (notaParaEximir <= 7.0) {
+                    if (notaParaEximir <= 1.0) {
+                        HTML += `<span>¡Asegurado! 🎊</span><div class="salvavidas">Incluso con 1.0 en lo que falta, te eximes (presentación ≥ 5.0).</div>`;
+                    } else {
+                        HTML += `<span>${notaParaEximir.toFixed(1)}</span><div class="salvavidas">Necesitas promediar esta nota en lo que falta para <strong>eximirte</strong> (presentación ≥ 5.0).</div>`;
+                        if (notaParaExamen <= 7.0 && notaParaExamen > 1.0) {
+                            HTML += `<div style="font-size:12px; margin-top:8px; opacity:0.8;">(Si prefieres solo asegurar el derecho a examen, con un <strong>${notaParaExamen.toFixed(1)}</strong> te alcanza.)</div>`;
+                        }
+                    }
+                } else {
+                    HTML += `<span>¡A Examen! 💀</span><div class="salvavidas">Ya no te da para eximirte. Necesitas al menos <strong>${notaParaExamen.toFixed(1)}</strong> en lo que falta solo para tener <strong>derecho a examen</strong> (presentación ≥ 3.0).</div>`;
+                }
+
+                resBox.innerHTML = HTML;
+                resBox.style.display = 'block';
+                return;
             }
 
-            if (ramo.tieneLab) {
-                let notasLab = [...ramo.notasLab];
-                for (let i = 0; i < notasLab.length; i++) {
-                    if (notasLab[i] === '' || notasLab[i] === undefined || isNaN(notasLab[i])) {
-                        alert("Completa todas las notas de laboratorio antes de calcular.");
-                        return;
-                    }
-                }
-                if (ramo.usaRecuperativoLab && ramo.notaRecuperativoLab !== '' && !isNaN(ramo.notaRecuperativoLab)) {
-                    let idxMin = 0;
-                    for (let i = 1; i < notasLab.length; i++) {
-                        if (parseFloat(notasLab[i]) < parseFloat(notasLab[idxMin])) idxMin = i;
-                    }
-                    if (parseFloat(ramo.notaRecuperativoLab) > parseFloat(notasLab[idxMin])) {
-                        notasLab[idxMin] = parseFloat(ramo.notaRecuperativoLab);
-                    }
-                }
-                notaLabCalculada = notasLab.reduce((a, b) => a + parseFloat(b), 0) / notasLab.length;
-                presentacion = promedioCat * (ramo.pesoCatPct / 100) + notaLabCalculada * (ramo.pesoLabPct / 100);
-            }
+            // ======= Todas las notas están, se calcula la nota de presentación real =======
+            const presentacion = conocido;
+            const promedioCat = notasCat.reduce((a, b, i) => a + parseFloat(b) * ((ramo.pesosCatInd[i] || 0) / 100), 0);
+            const notaEjerciciosCalculada = ramo.tieneEjercicios && ramo.cantEj > 0
+                ? ramo.notasEj.reduce((a, b) => a + parseFloat(b), 0) / ramo.cantEj : null;
+            const notaLabCalculada = ramo.tieneLab && ramo.cantLab > 0
+                ? notasLab.reduce((a, b) => a + parseFloat(b), 0) / ramo.cantLab : null;
+
+            let detalles = [`Cátedra: ${promedioCat.toFixed(2)}`];
+            if (notaEjerciciosCalculada !== null) detalles.push(`Ejercicios: ${notaEjerciciosCalculada.toFixed(2)}`);
+            if (notaLabCalculada !== null) detalles.push(`Lab: ${notaLabCalculada.toFixed(2)}`);
+            const detalleTexto = ` (${detalles.join(' · ')})`;
 
             let HTML = '';
-            let detalleLab = ramo.tieneLab ? ` (Cátedra: ${promedioCat.toFixed(2)} · Lab: ${notaLabCalculada.toFixed(2)})` : '';
-            if (ramo.tieneEjercicios) detalleLab = ` (Cátedra: ${promedioCat.toFixed(2)} · Ejercicios: ${notaEjerciciosCalculada.toFixed(2)})`;
 
             if (presentacion >= 5.0) {
                 resBox.classList.add('res-aprobado');
-                HTML = `<div class="res-header">Nota de Presentación</div><span>${presentacion.toFixed(2)}</span>¡Eximido del examen! 🎉${detalleLab}`;
+                HTML = `<div class="res-header">Nota de Presentación</div><span>${presentacion.toFixed(2)}</span>¡Eximido del examen! 🎉${detalleTexto}`;
             } else if (presentacion < 3.0) {
                 resBox.classList.add('res-critico');
-                HTML = `<div class="res-header">Nota de Presentación</div><span>${presentacion.toFixed(2)}</span>Ramo reprobado directamente 💀${detalleLab}`;
+                HTML = `<div class="res-header">Nota de Presentación</div><span>${presentacion.toFixed(2)}</span>Ramo reprobado directamente 💀${detalleTexto}`;
             } else {
                 if (ramo.notaExamen === '' || ramo.notaExamen === undefined || isNaN(ramo.notaExamen)) {
                     const examenNecesario = (4.0 - presentacion * 0.70) / 0.30;
@@ -967,7 +1024,7 @@
         };
 
         function renderCardNuevo(ramo) {
-            const labelsCat = ramo.tipoRamo === 'carrera' ? ['N1', 'N2', 'N3', 'Otras'] : ['N1', 'N2', 'N3', 'N4'];
+            const labelsCat = ['N1', 'N2', 'N3'];
             const inputsCatHTML = ramo.notasCat.map((nota, i) => `
                 <div class="celda-nota">
                     <input type="number" id="cat-${ramo.id}-${i}" step="0.1" min="1" max="7" value="${nota}" placeholder="${labelsCat[i] || ('N' + (i + 1))}" onchange="actualizarNota('${ramo.id}', 'cat', ${i}, this.value)">
