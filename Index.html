@@ -318,22 +318,26 @@
             }
         };
 
-        // Valores por defecto: Cátedra N1/N2/N3 = 25/30/30 (85%) + Ejercicios (talleres, promedio simple) = 15%, para los 3 tipos.
+        // Los 3 tipos usan Cátedra (N1/N2/N3) + Ejercicios (talleres/otras actividades, promedio simple) = Promedio.
+        // Matemáticas y Física: Cátedra 25/30/30 (85%) + Ejercicios 15%.
+        // Ramo de Carrera: Cátedra 25/25/25 (75%) + Ejercicios ("Otras Actividades") 25%.
         // Física y Carrera además combinan ese "Promedio" con Laboratorio (70/30 por defecto).
         function crearRamoNuevoTipo(nombre, tipo) {
             const tieneLab = (tipo === 'fisica' || tipo === 'carrera');
+            const esCarrera = (tipo === 'carrera');
             return {
                 id: Date.now().toString(),
                 nombre: nombre,
                 tipoRamo: tipo, // 'matematicas' | 'fisica' | 'carrera'
                 cantCat: 3,
                 notasCat: Array(3).fill(''),
-                pesosCatInd: [25, 30, 30],
+                pesosCatInd: esCarrera ? [25, 25, 25] : [25, 30, 30],
                 usaPAR: false,
                 notaPAR: '',
                 tieneEjercicios: true,
-                cantEj: 3,
-                notasEj: Array(3).fill(''),
+                pesoEjerciciosPct: esCarrera ? 25 : 15,
+                cantEj: esCarrera ? 1 : 3,
+                notasEj: esCarrera ? [''] : Array(3).fill(''),
                 tieneLab: tieneLab,
                 cantLab: tieneLab ? 5 : 0,
                 notasLab: tieneLab ? Array(5).fill('') : [],
@@ -658,8 +662,9 @@
                 const el = document.getElementById(`pcat-${ramoId}-${i}`);
                 suma += el ? (parseFloat(el.value) || 0) : 0;
             }
-            const target = ramo.tieneEjercicios ? 85 : 100;
-            const sufijo = ramo.tieneEjercicios ? ' (+ 15% de Ejercicios = 100% total)' : '';
+            const pesoEj = ramo.pesoEjerciciosPct || 15;
+            const target = ramo.tieneEjercicios ? (100 - pesoEj) : 100;
+            const sufijo = ramo.tieneEjercicios ? ` (+ ${pesoEj}% de Ejercicios = 100% total)` : '';
             const resumen = document.getElementById(`resumen-cat-${ramoId}`);
             if (!resumen) return;
             const fill = resumen.querySelector('.resumen-barra-fill');
@@ -731,7 +736,7 @@
 
             // Ejercicios (promedio simple de talleres), 15% repartido en partes iguales
             if (ramo.tieneEjercicios && ramo.cantEj > 0) {
-                const pesoPorTaller = (0.15 * escalaCat) / ramo.cantEj;
+                const pesoPorTaller = (((ramo.pesoEjerciciosPct || 15) / 100) * escalaCat) / ramo.cantEj;
                 for (let i = 0; i < ramo.cantEj; i++) {
                     const n = ramo.notasEj[i];
                     if (n === '' || n === undefined || isNaN(n)) { pesoVacio += pesoPorTaller; hayVacios = true; }
@@ -1035,9 +1040,10 @@
                     <input type="number" id="lab-${ramo.id}-${i}" step="0.1" min="1" max="7" value="${nota}" placeholder="L${i + 1}" onchange="actualizarNota('${ramo.id}', 'lab', ${i}, this.value)">
                 </div>`).join('') : '';
 
+            const prefEj = ramo.tipoRamo === 'carrera' ? 'OA' : 'T';
             const inputsEjHTML = ramo.tieneEjercicios ? ramo.notasEj.map((nota, i) => `
                 <div class="celda-nota">
-                    <input type="number" id="ej-${ramo.id}-${i}" step="0.1" min="1" max="7" value="${nota}" placeholder="T${i + 1}" onchange="actualizarNota('${ramo.id}', 'ej', ${i}, this.value)">
+                    <input type="number" id="ej-${ramo.id}-${i}" step="0.1" min="1" max="7" value="${nota}" placeholder="${prefEj}${i + 1}" onchange="actualizarNota('${ramo.id}', 'ej', ${i}, this.value)">
                 </div>`).join('') : '';
 
             return `
@@ -1112,7 +1118,7 @@
                     </div>` : ''}
 
                     ${ramo.tieneEjercicios ? `
-                    <div class="notas-subtitulo">Ejercicios (Talleres) — promedio simple, 15%</div>
+                    <div class="notas-subtitulo">${ramo.tipoRamo === 'carrera' ? 'Otras Actividades' : 'Ejercicios (Talleres)'} — promedio simple, ${ramo.pesoEjerciciosPct || 15}%</div>
                     <div class="notas-grid">${inputsEjHTML}</div>` : ''}
 
                     ${ramo.tieneLab ? `
